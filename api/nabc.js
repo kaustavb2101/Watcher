@@ -18,8 +18,8 @@ export default async function handler(req) {
         const response = await fetch(targetUrl);
 
         if (!response.ok) {
-            return new Response(JSON.stringify({ error: `NABC API responded with ${response.status}` }), {
-                status: response.status,
+            return new Response(JSON.stringify({ error: `NABC API responded with ${response.status}`, fallback: true, data: [] }), {
+                status: 200,
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
@@ -39,8 +39,8 @@ export default async function handler(req) {
         });
 
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
+        return new Response(JSON.stringify({ error: error.message, fallback: true, data: [] }), {
+            status: 200,
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*'
