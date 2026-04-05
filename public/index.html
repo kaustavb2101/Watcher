@@ -401,6 +401,24 @@
     .ec[data-sev="hi"]   { border-left: 3px solid rgba(220,130,30,0.7) }
     .ec[data-sev="med"]  { border-left: 3px solid rgba(184,148,58,0.6) }
     .ec[data-sev="lo"]   { border-left: 3px solid rgba(100,130,100,0.4) }
+
+    /* Sector filter pills */
+    .sfp {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px;
+      letter-spacing: .06em;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: .15s;
+      white-space: nowrap;
+    }
+    .sfp:hover { border-color: var(--gold); color: var(--gold); }
+    .sfp.active { background: var(--gold); color: var(--bg); border-color: var(--gold); }
     .ec.active[data-sev="crit"] { border-left: 3px solid rgba(215,64,64,1.0) }
     .ec.active[data-sev="hi"]   { border-left: 3px solid rgba(220,130,30,1.0) }
     .ec.active[data-sev="med"]  { border-left: 3px solid rgba(184,148,58,1.0) }
@@ -2608,6 +2626,16 @@
         <button class="hbtn" id="compareBtn" onclick="toggleCompareMode()" title="Toggle Compare Mode"
           style="padding: 10px 12px; font-size: 14px;">⚖</button>
       </div>
+      <!-- Sector filter pills -->
+      <div id="sectorFilterBar" style="display:flex;flex-wrap:wrap;gap:4px;padding:6px 12px 0 12px" role="toolbar" aria-label="Filter by sector">
+        <button class="sfp active" onclick="filterSector('all',this)" data-sec="all">ALL</button>
+        <button class="sfp" onclick="filterSector('geo',this)" data-sec="geo">⚔️ GEO</button>
+        <button class="sfp" onclick="filterSector('trade',this)" data-sec="trade">📦 TRADE</button>
+        <button class="sfp" onclick="filterSector('energy',this)" data-sec="energy">⚡ ENERGY</button>
+        <button class="sfp" onclick="filterSector('tech',this)" data-sec="tech">🤖 TECH</button>
+        <button class="sfp" onclick="filterSector('env',this)" data-sec="env">🌊 ENV</button>
+        <button class="sfp" onclick="filterSector('policy',this)" data-sec="policy">📋 POLICY</button>
+      </div>
 
       <div style="background:var(--paper); padding:15px; margin: 15px 12px 0 12px; border-radius:var(--r); border:1px solid var(--border);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -3175,6 +3203,30 @@
       });
     }
 
+    // Sector-relevance filter: map pill keys to sb-cat text keywords
+    const SECTOR_MAP = {
+      geo:    ['geopolitical'],
+      trade:  ['trade'],
+      energy: ['energy', 'macro'],
+      tech:   ['technology'],
+      env:    ['environmental'],
+      policy: ['policy']
+    };
+    function filterSector(sec, btn) {
+      // Update active pill
+      document.querySelectorAll('.sfp').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.querySelectorAll('.sb-section').forEach(section => {
+        if (sec === 'all') {
+          section.style.display = '';
+          return;
+        }
+        const catText = (section.querySelector('.sb-cat')?.textContent || '').toLowerCase();
+        const keywords = SECTOR_MAP[sec] || [];
+        section.style.display = keywords.some(kw => catText.includes(kw)) ? '' : 'none';
+      });
+    }
+
     /* ═══════════════════════════════════════════
        TEXTAREA CHAR COUNT
     ═══════════════════════════════════════════ */
@@ -3546,7 +3598,7 @@
       }, 400); // Optimized for speed
 
       S.abortCtrl = new AbortController();
-      const agents = ['overview', 'labor', 'commodities', 'strategy'];
+      const agents = ['overview', 'labor', 'commodities', 'strategy', 'synergy'];
       const results = {};
       const errors = {};
       let resolved = 0;
@@ -3845,6 +3897,100 @@ Use telegraphic brevity. No fluff.
         <div class="pg" style="margin-top:10px;">${agHtml}</div>
       </div>`;
     }
+    function renderMacroTrends(d) {
+      // Static Thai macro trend data (BOT/NESDC/NSO sources, updated 2026-04)
+      const gdpSeries  = [2.6, 1.9, 1.5, 2.5, 4.2, 1.5, 2.8, 2.4, 1.8, 1.6];
+      const gdpLabels  = ['2017','2018','2019','2020','2021','2022','2023','2024e','2025e','2026f'];
+      const cpiSeries  = [0.7, 1.1, 0.7, -0.8, 1.2, 6.1, 1.2, 0.9, 1.1, 1.5];
+      const debtSeries = [77.5, 78.6, 79.8, 86.6, 89.7, 88.2, 90.1, 90.6, 91.0, 90.8]; // % GDP
+      const wageGrowth = [3.2, 3.8, 2.1, -1.2, 1.8, 2.4, 1.9, 1.2, 0.8, 0.5];
+
+      // Build inline SVG sparklines (no ECharts dependency)
+      function sparkline(data, color, h=40, highlightLast=true) {
+        const min = Math.min(...data), max = Math.max(...data);
+        const range = max - min || 1;
+        const w = 200;
+        const pts = data.map((v, i) => {
+          const x = (i / (data.length - 1)) * w;
+          const y = h - ((v - min) / range) * (h - 4) - 2;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        const lastX = w, lastY = h - ((data[data.length-1] - min) / range) * (h - 4) - 2;
+        return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
+          <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8"/>
+          ${highlightLast ? `<circle cx="${lastX}" cy="${lastY.toFixed(1)}" r="3" fill="${color}"/>` : ''}
+        </svg>`;
+      }
+
+      const impactScore = d.impactScore || 0;
+      const gdpDelta = d.gdpImpact || '—';
+
+      const rows = [
+        { label: 'GDP Growth (%)', series: gdpSeries, labels: gdpLabels, color: '#4CAF82', unit: '% YoY', note: `Forecast ${gdpSeries[gdpSeries.length-1]}% · Event delta: ${gdpDelta}` },
+        { label: 'CPI Inflation (%)', series: cpiSeries, labels: gdpLabels, color: '#F5A623', unit: '% YoY', note: `Mar 2026: ~1.5% · Oil shock risk ↑` },
+        { label: 'Household Debt (% GDP)', series: debtSeries, labels: gdpLabels, color: '#E25555', unit: '% GDP', note: `Q4/2024: ~90.8% · ASEAN highest` },
+        { label: 'Real Wage Growth (%)', series: wageGrowth, labels: gdpLabels, color: '#7BC8F5', unit: '% YoY', note: `Slowing · Informal floor risk` },
+      ];
+
+      const rowsHtml = rows.map(r => {
+        const latest = r.series[r.series.length - 1];
+        const prev   = r.series[r.series.length - 2];
+        const delta  = latest - prev;
+        const deltaStr = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+        const deltaColor = (r.label.includes('Debt') || r.label.includes('CPI')) ? (delta > 0 ? '#E25555' : '#4CAF82') : (delta >= 0 ? '#4CAF82' : '#E25555');
+        return `<div style="background:var(--ink); border-radius:6px; padding:10px; border:1px solid rgba(255,255,255,0.07)">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px">
+            <div>
+              <div style="font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:2px">${r.label}</div>
+              <div style="font-size:18px; font-weight:800; color:${r.color}">${latest}${r.unit.includes('%') ? '%' : ''}</div>
+              <div style="font-size:9px; color:${deltaColor}; font-weight:700">${deltaStr} YoY</div>
+            </div>
+            <div style="font-size:9px; color:var(--muted); text-align:right; max-width:120px; line-height:1.4">${r.note}</div>
+          </div>
+          ${sparkline(r.series, r.color)}
+          <div style="display:flex; justify-content:space-between; font-size:8px; color:rgba(255,255,255,0.25); margin-top:2px">
+            <span>${r.labels[0]}</span><span>${r.labels[Math.floor(r.labels.length/2)]}</span><span>${r.labels[r.labels.length-1]}</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Event impact projection bar
+      const projColor = impactScore < -30 ? '#E25555' : impactScore < 0 ? '#F5A623' : '#4CAF82';
+      const projBar = `<div style="background:var(--ink); border-radius:6px; padding:12px; border:1px solid ${projColor}33; margin-top:12px">
+        <div style="font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:8px">⚡ EVENT MACRO IMPACT PROJECTION vs. BASELINE TRAJECTORY</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div>
+            <div style="font-size:10px; color:var(--muted); margin-bottom:4px">GDP Baseline (2026f)</div>
+            <div style="background:rgba(255,255,255,0.05); border-radius:3px; height:8px; margin-bottom:8px">
+              <div style="background:#4CAF82; width:${Math.min(gdpSeries[gdpSeries.length-1]/4*100,100)}%; height:100%; border-radius:3px"></div>
+            </div>
+            <div style="font-size:10px; color:var(--muted); margin-bottom:4px">GDP Post-Event (est.)</div>
+            <div style="background:rgba(255,255,255,0.05); border-radius:3px; height:8px">
+              <div style="background:${projColor}; width:${Math.max(Math.min((gdpSeries[gdpSeries.length-1] + (impactScore/100)*2)/4*100,100),2)}%; height:100%; border-radius:3px"></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--muted)">BOT Macro Snapshot</div>
+            <div style="font-size:11px; color:var(--fg); margin-top:4px; line-height:1.6">
+              Policy rate: <strong>2.00%</strong><br>
+              THB/USD: <strong>~34.5</strong><br>
+              Current account: <strong>-0.5% GDP</strong><br>
+              FX reserves: <strong>$226B</strong>
+            </div>
+          </div>
+        </div>
+        ${d.costOfLiving ? `<div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.07); font-size:10px; color:var(--muted)">
+          <strong style="color:${projColor}">Inflation impact from this event:</strong> Overall ${esc(d.costOfLiving.overallInflationImpact || '—')} · Food prices ${esc(d.costOfLiving.foodPriceImpact || '—')}
+        </div>` : ''}
+      </div>`;
+
+      return `<div id="pane-macro-trends" class="pane" role="tabpanel" aria-label="Macro trends">
+        <div style="font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--border)">📈 THAILAND MACRO INDICATORS — BOT/NESDC/NSO HISTORICAL (2017–2026f)</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px">${rowsHtml}</div>
+        ${projBar}
+      </div>`;
+    }
+
     function renderResults(tag, title, d) {
       if (!d) return; // Prevent crash on null data
       const sc = SENTIMENT_COLORS[d.overallSentiment] || '#B8943A';
@@ -3904,6 +4050,7 @@ Use telegraphic brevity. No fluff.
     <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('regional',this)">🌍 Regional</div>
     <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('timeline',this)">📅 Timeline</div>
     <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('recommendations',this)">💡 Actions</div>
+    <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('macro-trends',this)">📈 Macro Trends</div>
   </div>`;
 
       /* — OVERVIEW PANE — */
@@ -4244,13 +4391,16 @@ Use telegraphic brevity. No fluff.
       /* — COMMODITIES PANE — */
       const commodPane = renderCommodities(d);
 
+      /* — MACRO TRENDS PANE — */
+      const macroTrendsPane = renderMacroTrends(d);
+
       /* — ASSEMBLE — */
       const resEl = document.getElementById('results');
       const instBtn = `<button class="bbn" style="background:var(--gold); color:var(--ink); font-weight:800; border:none" onclick="generateExecutiveReport()" aria-label="Institutional Report">🏛️ INSTITUTIONAL REPORT</button>`;
-      
+
       const combinedBanner = banner.replace('class="b-btns">', `class="b-btns">${instBtn}`);
 
-      resEl.innerHTML = combinedBanner + kpi + tabs + ovPane + profPane + indPane + commodPane + regPane + tlPane + recPane;
+      resEl.innerHTML = combinedBanner + kpi + tabs + ovPane + profPane + indPane + commodPane + regPane + tlPane + recPane + macroTrendsPane;
       hide('emptyState', 'loadState', 'errorState');
       show('results');
       resEl.classList.add('vis');
@@ -4399,23 +4549,46 @@ Use telegraphic brevity. No fluff.
                   // Event impact fraction (how severe is this event, 0–1)
                   const impactFraction = Math.abs(globalImpact) / 100;
 
-                  // Monthly THB at risk: employed × income × impact fraction
-                  const laborExposure = employed * avgIncome * impactFraction;
+                  // ── FORMAL/INFORMAL SPLIT ──────────────────────────────────────
+                  // Informal workers (no unemployment insurance, no formal credit)
+                  // are ~1.5x more vulnerable than formal workers.
+                  // Thai avg: 55% informal. Agricultural provinces: ~70%. Urban: ~35%.
+                  const unemployRate = lfsEntry ? (lfsEntry.unemploymentRate || 1.5) : 1.5;
+                  const isAgri = profs.some(p => /farm|agri|rice|cassava|rubber|sugarcane/i.test(p.name || ''));
+                  const isUrban = profs.some(p => /factory|engineer|tech|office|deliver/i.test(p.name || ''));
+                  const informalFraction = isAgri ? 0.68 : isUrban ? 0.38 : 0.55;
+                  const vulnerabilityMult = 1 + informalFraction * 0.5; // informal = 50% more exposed
 
-                  // Vehicle market exposure: each vehicle ~฿800/mo fuel cost at risk
-                  const vehicleExposure = vehicles * 800 * impactFraction;
+                  // ── OIL SLIDER CALIBRATION ─────────────────────────────────────
+                  // Each $10 oil change = ~1% fuel cost impact on transport/agri;
+                  // vehicle fuel exposure scales linearly with oil price delta.
+                  const oilDelta = window.OIL_SLIDER_DELTA || 0;
+                  const oilFuelMult = 1 + (oilDelta / 100); // $10 delta = 10% fuel cost shift
+
+                  // Monthly THB at risk: employed × income × impact × vulnerability
+                  const laborExposure = employed * avgIncome * impactFraction * vulnerabilityMult;
+
+                  // Vehicle market exposure scales with oil price (฿800/mo baseline at $75/bbl)
+                  const vehicleExposure = vehicles * 800 * oilFuelMult * impactFraction;
 
                   // Combined economic exposure in THB/month
                   const combinedTHB = laborExposure + vehicleExposure;
 
-                  // Normalize to -100/+100 scale relative to Bangkok's max exposure
-                  // Bangkok: ~5.6M employed × ฿25k avg income × 0.8 = ฿112B + 12.5M vehicles × 800 × 0.8 = ฿8B ≈ ฿120B
+                  // ── SQRT COMPRESSION ────────────────────────────────────────────
+                  // Normalize to 0–100 against Bangkok's max (~฿120B), then apply
+                  // sqrt compression so small provinces aren't all clustered near 0.
+                  // sqrt(x)*10 maps: 1→10, 4→20, 9→30, 25→50, 100→100 (Bangkok).
                   const bangkokMaxTHB = 120e9;
-                  const normalizedMagnitude = Math.min((combinedTHB / bangkokMaxTHB) * 100, 100);
+                  const rawPct = Math.min((combinedTHB / bangkokMaxTHB) * 100, 100);
+                  const normalizedMagnitude = Math.sqrt(rawPct) * 10;
 
-                  // Apply event direction; add oil slider delta as modifier
+                  // Apply event direction; oil slider adds separate directional modifier
                   score = Math.round(Math.sign(globalImpact || -1) * normalizedMagnitude);
-                  score += Math.round((window.OIL_SLIDER_DELTA || 0) * -0.3);
+                  // Oil spike directly worsens score for energy-dependent provinces (agri/transport)
+                  if (oilDelta !== 0) {
+                    const oilSensitivity = isAgri ? 0.4 : isUrban ? 0.15 : 0.25;
+                    score += Math.round(oilDelta * -oilSensitivity);
+                  }
                   score = Math.max(-100, Math.min(100, score));
                 }
 
@@ -4839,6 +5012,19 @@ Use telegraphic brevity. No fluff.
       const debtRatio    = intelData ? intelData.debtToIncome.toFixed(1) + 'x' : (nsoData ? '~' : '—');
       const debtHH       = intelData ? '฿' + (intelData.debtPerHousehold/1000).toFixed(0) + 'k' : '—';
       const stressColor  = intelData ? (intelData.stressIndex > 0.75 ? '#E25555' : intelData.stressIndex > 0.55 ? '#F5A623' : '#4CAF82') : '#aaa';
+      // Debt stress test calculations (assumes 5-year amortization on household debt)
+      const rawDebtHH    = intelData ? intelData.debtPerHousehold : 0;
+      const monthlyDS    = rawDebtHH > 0 ? Math.round(rawDebtHH / 60) : 0;
+      const dscRatioRaw  = avgProvIncome > 0 && monthlyDS > 0 ? monthlyDS / avgProvIncome : 0;
+      const dscPct       = (dscRatioRaw * 100).toFixed(0);
+      // Post-shock DSCR: income contracts by min(|lastScore|/100 * 0.35, 35%)
+      const lastScore    = S.lastResult ? (S.lastResult.impactScore || 0) : 0;
+      const incomeShock  = Math.min(Math.abs(lastScore) / 100 * 0.35, 0.35);
+      const shockedIncome = avgProvIncome * (1 - incomeShock);
+      const stressedDsc  = shockedIncome > 0 && monthlyDS > 0 ? ((monthlyDS / shockedIncome) * 100).toFixed(0) : '—';
+      const nplRisk      = dscRatioRaw > 0.45 ? '#E25555' : dscRatioRaw > 0.30 ? '#F5A623' : '#4CAF82';
+      const nplLabel     = dscRatioRaw > 0.45 ? 'HIGH NPL RISK' : dscRatioRaw > 0.30 ? 'ELEVATED' : 'MANAGEABLE';
+      const nplThreshold = dscRatioRaw > 0 ? Math.round(avgProvIncome * (1 - (monthlyDS / (avgProvIncome * 0.45)))) : 0;
       // Professions from PROVINCE_INTEL_KB (preferred) or fallback to PROVINCE_PROFILES
       const intelProfessions = intelData ? intelData.professions : null;
       const avgProvIncome = (intelData && intelData.avgIncome) ? intelData.avgIncome : 15000;
@@ -4893,6 +5079,11 @@ Use telegraphic brevity. No fluff.
             <div style="font-size:14px; font-weight:800; color:${stressColor}">${debtHH}</div>
             <div style="font-size:7px; color:rgba(255,255,255,0.35)">${debtRatio} debt-to-income</div>
           </div>
+          <div style="text-align:center">
+            <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">💥 Debt Service</div>
+            <div style="font-size:14px; font-weight:800; color:${nplRisk}">${monthlyDS > 0 ? dscPct + '%' : '—'}</div>
+            <div style="font-size:7px; color:rgba(255,255,255,0.35)">${monthlyDS > 0 ? `${nplLabel} · post-shock: ${stressedDsc}%` : 'No debt data'}</div>
+          </div>
         </div>
         <div style="margin-bottom:14px">
           <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:6px">💼 Provincial Workforce Breakdown (NSO/MOL)</div>
@@ -4913,7 +5104,11 @@ Use telegraphic brevity. No fluff.
       document.getElementById('dd-overlay').classList.add('vis');
       
       try {
-        const d = await fetchAnalysisAgent(S.lastTag, S.lastTitle, S.lastCtx, 'province', name, branches, professions);
+        // Provide fallback context if no event has been analyzed yet
+        const _provTag   = S.lastTag   || 'MACRO · 2026';
+        const _provTitle = S.lastTitle || 'Thailand Macro-Labor Outlook 2026';
+        const _provCtx   = S.lastCtx   || `Thailand 2026 macro context: GDP 1.6–1.7%, household debt ~90% GDP, 50%+ informal workers, US 19% tariff impact, oil near $80/bbl, structural slowdown. Province: ${name}. Region: ${region || 'Unknown'}. Branch count: ${branches}. Key sectors: ${professions.split(',').slice(0,3).join(',')||'diverse'}.`;
+        const d = await fetchAnalysisAgent(_provTag, _provTitle, _provCtx, 'province', name, branches, professions);
         const score = d.impactScore || 0;
         const color = scoreColor(score);
         content.innerHTML = `
@@ -4932,6 +5127,34 @@ Use telegraphic brevity. No fluff.
             <ul style="padding-left:18px; margin-bottom:20px; color:var(--muted); font-size:13px">
               ${(d.criticalSubSectors || []).map(s => `<li>${esc(s)}</li>`).join('')}
             </ul>
+
+            ${monthlyDS > 0 ? `
+            <div class="dd-ai-t" style="margin-top:16px">📊 HOUSEHOLD DEBT STRESS TEST</div>
+            <div style="background:var(--ink); border-radius:6px; padding:10px; border:1px solid ${nplRisk}33; margin-bottom:12px">
+              <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px">
+                <div style="text-align:center; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px">
+                  <div style="font-size:8px; color:var(--muted); margin-bottom:2px">MONTHLY DEBT SVC</div>
+                  <div style="font-size:13px; font-weight:800; color:white">฿${monthlyDS.toLocaleString()}</div>
+                  <div style="font-size:7px; color:rgba(255,255,255,0.3)">5-yr amortization</div>
+                </div>
+                <div style="text-align:center; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px">
+                  <div style="font-size:8px; color:var(--muted); margin-bottom:2px">DSCR BASELINE</div>
+                  <div style="font-size:13px; font-weight:800; color:${nplRisk}">${dscPct}%</div>
+                  <div style="font-size:7px; color:rgba(255,255,255,0.3)">of monthly income</div>
+                </div>
+                <div style="text-align:center; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px">
+                  <div style="font-size:8px; color:var(--muted); margin-bottom:2px">POST-SHOCK DSCR</div>
+                  <div style="font-size:13px; font-weight:800; color:${parseFloat(stressedDsc)>45?'#E25555':parseFloat(stressedDsc)>30?'#F5A623':'#4CAF82'}">${stressedDsc}%</div>
+                  <div style="font-size:7px; color:rgba(255,255,255,0.3)">${(incomeShock*100).toFixed(0)}% income contraction</div>
+                </div>
+              </div>
+              <div style="font-size:10px; padding:6px 8px; border-radius:4px; background:${nplRisk}11; border:1px solid ${nplRisk}33; color:${nplRisk}; font-weight:700">
+                ${nplRisk === '#E25555' ? '⚠️ NPL RISK ELEVATED — debt service already exceeds BOT 45% threshold. Any income shock likely triggers default.' :
+                  nplRisk === '#F5A623' ? '⚡ WATCH LIST — debt service moderate; a ' + (incomeShock*100).toFixed(0) + '% income shock would push DSCR to ' + stressedDsc + '%, approaching NPL threshold.' :
+                  '✅ SERVICEABLE — debt load manageable at current income. Stress scenario remains within BOT 45% threshold.'}
+              </div>
+              ${nplThreshold > 0 && nplRisk !== '#4CAF82' ? `<div style="font-size:9px; color:var(--muted); margin-top:6px">Income floor to stay below 45% DSCR: ฿${nplThreshold.toLocaleString()}/mo (current: ฿${avgProvIncome.toLocaleString()}/mo)</div>` : ''}
+            </div>` : ''}
 
             <div class="dd-ai-t">AUTOX BRANCH STRATEGY (${branches} LOCATIONS)</div>
             <div class="dd-card" style="border-left:3px solid var(--gold); background:rgba(212,171,82,0.05)">

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(node scripts/*)",
+      "Bash(npm run*)",
+      "Bash(npm install*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ const j=JSON.parse(d||'{}'); const fp=(j.tool_input&&j.tool_input.file_path)||''; if(fp.includes('public/index.html')){ const {execSync}=require('child_process'); try{ execSync('node scripts/verify-final.cjs',{stdio:'inherit',cwd:'c:/Users/Kaustav Bagchi/OneDrive/Desktop/Watcher'}); }catch(e){ process.exit(1); } } });\"",
+            "timeout": 30,
+            "statusMessage": "Verifying index.html integrity..."
+          }
+        ]
+      }
+    ]
+  }
+}
