@@ -379,9 +379,10 @@
       border-radius: var(--r);
       cursor: pointer;
       border: 1px solid rgba(255, 255, 255, .04);
+      border-left: 3px solid transparent;
       margin-bottom: 5px;
       transition: .14s;
-      background: rgba(255, 255, 255, .018);
+      background: rgba(255, 255, 255, .032);
       user-select: none;
       position: relative;
     }
@@ -395,6 +396,14 @@
       background: rgba(184, 148, 58, .13);
       border-color: var(--gold2)
     }
+
+    .ec[data-sev="crit"] { border-left: 3px solid rgba(215,64,64,0.7) }
+    .ec[data-sev="hi"]   { border-left: 3px solid rgba(220,130,30,0.7) }
+    .ec[data-sev="med"]  { border-left: 3px solid rgba(184,148,58,0.6) }
+    .ec[data-sev="lo"]   { border-left: 3px solid rgba(100,130,100,0.4) }
+    .ec.active[data-sev="crit"] { border-left: 3px solid rgba(215,64,64,1.0) }
+    .ec.active[data-sev="hi"]   { border-left: 3px solid rgba(220,130,30,1.0) }
+    .ec.active[data-sev="med"]  { border-left: 3px solid rgba(184,148,58,1.0) }
 
     .ec.filtered {
       display: none
@@ -412,9 +421,9 @@
     }
 
     .ec-title {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
-      color: rgba(245, 240, 232, .92);
+      color: rgba(245, 240, 232, .95);
       line-height: 1.35;
       margin-bottom: 1px
     }
@@ -3123,6 +3132,17 @@
       document.querySelectorAll('.ec-cmp').forEach(el => el.style.display = 'none');
 
       // Cache Disabled
+      // Set severity data attributes for CSS left-border styling
+      document.querySelectorAll('.ec').forEach(card => {
+        const dot = card.querySelector('.sdot');
+        if (dot) {
+          if (dot.classList.contains('c-crit')) card.dataset.sev = 'crit';
+          else if (dot.classList.contains('c-hi')) card.dataset.sev = 'hi';
+          else if (dot.classList.contains('c-med')) card.dataset.sev = 'med';
+          else card.dataset.sev = 'lo';
+        }
+      });
+
       // Call NABC prices on load
       fetchNABCPrices().then(() => {
         // Auto-select first event after NABC finishes initializing
@@ -4339,37 +4359,65 @@ Use telegraphic brevity. No fluff.
         const baselineModifier = window.OIL_SLIDER_DELTA || 0; // Support slider
 
         let gridHtml = `<div style="display:flex;gap:8px;margin-bottom:10px;font-size:9px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap;padding:0 10px;">
-          <span style="background:rgba(180,20,20,0.45);color:#FF6B6B;padding:2px 6px;border-radius:3px">&#9632; SEVERE &lt;&#8722;60</span>
-          <span style="background:rgba(215,64,64,0.30);color:#F86666;padding:2px 6px;border-radius:3px">&#9632; HIGH &#8722;35</span>
-          <span style="background:rgba(220,100,30,0.25);color:#FF9A5C;padding:2px 6px;border-radius:3px">&#9632; MOD &#8722;15</span>
-          <span style="background:rgba(204,168,91,0.18);color:#C8A83A;padding:2px 6px;border-radius:3px">&#9632; NEUTRAL</span>
-          <span style="background:rgba(46,160,67,0.25);color:#42C65D;padding:2px 6px;border-radius:3px">&#9632; GAIN &gt;+10</span>
+          <span style="background:rgba(180,20,20,0.45);color:#FF6B6B;padding:2px 6px;border-radius:3px">&#9632; SEVERE &lt;&#8722;55</span>
+          <span style="background:rgba(215,64,64,0.28);color:#F88;padding:2px 6px;border-radius:3px">&#9632; HIGH &#8722;30</span>
+          <span style="background:rgba(220,100,30,0.22);color:#FF9A5C;padding:2px 6px;border-radius:3px">&#9632; MOD &#8722;12</span>
+          <span style="background:rgba(204,168,91,0.16);color:#C8A83A;padding:2px 6px;border-radius:3px">&#9632; NEUTRAL</span>
+          <span style="background:rgba(46,160,67,0.25);color:#42C65D;padding:2px 6px;border-radius:3px">&#9632; GAIN &gt;+15</span>
         </div>
         <div id="regionalHeatGrid" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; width:100%; align-items:start; padding:10px; box-sizing:border-box;">`;
 
         for (const [rName, pList] of Object.entries(REGIONS)) {
             let pData = pList.map(prov => {
-                // Determine explicit AI score or interpolate
-                let explicit = (d.regionalImpact || []).find(ep => ep.province === prov || ep.province === prov.replace(' Metropolis',''));
-                // Build a region-average fallback from AI-returned provinces in the same region
-                const regionScores = (d.regionalImpact || []).filter(ep => ep.region === rName).map(ep => ep.impactScore);
-                const regionAvg = regionScores.length > 0 ? regionScores.reduce((a,b) => a+b, 0) / regionScores.length : globalImpact * 0.8;
-                // GPP hub-type modifier: AGRI provinces hit harder on commodity events, IND on trade/tech
-                const gppEntry = (window.GPP_KB || {})[prov] || (window.GPP_KB || {})[prov.replace(' Metropolis','')];
-                const hubMod = gppEntry ? (
-                  gppEntry.hubType === 'AGRI' ? (globalImpact < 0 ? -8 : 5) :
-                  gppEntry.hubType === 'IND'  ? (globalImpact < 0 ? -5 : 8) :
-                  gppEntry.hubType === 'TOUR' ? (globalImpact < 0 ? -6 : 4) : 0
-                ) : 0;
-                // DLT vehicle density modifier: high-vehicle provinces more exposed to oil/trade shocks
-                const dltEntry = (window.DLT_PROVINCE_TOTALS || {})[prov] || (window.DLT_PROVINCE_TOTALS || {})[prov.replace(' Metropolis','')];
-                const dltMod = dltEntry && dltEntry.total > 500000 ? (globalImpact < 0 ? -4 : 3) : 0;
-                // Small province-specific jitter from name hash so adjacent same-region provinces differ visually
-                const nameHash = prov.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xffff, 0);
-                const jitter = ((nameHash % 11) - 5);  // -5 to +5
-                let score = explicit ? explicit.impactScore : Math.round(regionAvg + hubMod + dltMod + jitter);
-                score += Math.round((window.OIL_SLIDER_DELTA || 0) * -0.4);
-                score = Math.max(-100, Math.min(100, score));
+                let score = 0;
+
+                // Use AI explicit score if available for this province
+                const explicit = (d.regionalImpact || []).find(ep =>
+                  ep.province === prov || ep.province === prov.replace(' Metropolis','')
+                );
+
+                if (explicit) {
+                  score = explicit.impactScore;
+                } else {
+                  // Economic-impact based scoring: household income × population × market size
+                  const lfsEntry  = (window.NSO_LFS_KB  || {})[prov] || (window.NSO_LFS_KB  || {})[prov.replace(' Metropolis','')];
+                  const dltEntry  = (window.DLT_PROVINCE_TOTALS || {})[prov] || (window.DLT_PROVINCE_TOTALS || {})[prov.replace(' Metropolis','')];
+                  const intelEntry = (window.PROVINCE_INTEL_KB || {})[prov] || (window.PROVINCE_INTEL_KB || {})[prov.replace(' Metropolis','')];
+
+                  // Population at risk (employed heads)
+                  const employed = lfsEntry ? lfsEntry.employed * 1000 : 80000;
+
+                  // Average household monthly income (from profession data)
+                  const profs = intelEntry && intelEntry.professions ? intelEntry.professions : [];
+                  const avgIncome = profs.length > 0
+                    ? profs.reduce((s, p) => s + (p.avgIncome || 0), 0) / profs.length
+                    : 13000;
+
+                  // Vehicle count (economic market size proxy)
+                  const vehicles = dltEntry ? dltEntry.total : 150000;
+
+                  // Event impact fraction (how severe is this event, 0–1)
+                  const impactFraction = Math.abs(globalImpact) / 100;
+
+                  // Monthly THB at risk: employed × income × impact fraction
+                  const laborExposure = employed * avgIncome * impactFraction;
+
+                  // Vehicle market exposure: each vehicle ~฿800/mo fuel cost at risk
+                  const vehicleExposure = vehicles * 800 * impactFraction;
+
+                  // Combined economic exposure in THB/month
+                  const combinedTHB = laborExposure + vehicleExposure;
+
+                  // Normalize to -100/+100 scale relative to Bangkok's max exposure
+                  // Bangkok: ~5.6M employed × ฿25k avg income × 0.8 = ฿112B + 12.5M vehicles × 800 × 0.8 = ฿8B ≈ ฿120B
+                  const bangkokMaxTHB = 120e9;
+                  const normalizedMagnitude = Math.min((combinedTHB / bangkokMaxTHB) * 100, 100);
+
+                  // Apply event direction; add oil slider delta as modifier
+                  score = Math.round(Math.sign(globalImpact || -1) * normalizedMagnitude);
+                  score += Math.round((window.OIL_SLIDER_DELTA || 0) * -0.3);
+                  score = Math.max(-100, Math.min(100, score));
+                }
 
                 let totalVehicles = window.DLT_LOOKUP ? window.DLT_LOOKUP(prov) : 0;
                 return { name: prov, score: score, totalVehicles: totalVehicles };
@@ -4381,11 +4429,11 @@ Use telegraphic brevity. No fluff.
             let avgScore = pData.length > 0 ? (pData.reduce((s, p) => s + p.score, 0) / pData.length) : 0;
             
             const getHeatClass = (s) => {
-              if (s <= -60) return 'background:rgba(180,20,20,0.45); color:#FF6B6B; border:1px solid rgba(215,64,64,0.7)';
-              if (s <= -35) return 'background:rgba(215,64,64,0.30); color:#F86666; border:1px solid rgba(215,64,64,0.5)';
-              if (s <= -15) return 'background:rgba(220,100,30,0.25); color:#FF9A5C; border:1px solid rgba(220,100,30,0.45)';
-              if (s <= 0)   return 'background:rgba(204,168,91,0.18); color:var(--gold); border:1px solid rgba(204,168,91,0.35)';
-              if (s <= 10)  return 'background:rgba(80,160,100,0.15); color:#7BC891; border:1px solid rgba(46,160,67,0.25)';
+              if (s <= -55) return 'background:rgba(180,20,20,0.45); color:#FF6B6B; border:1px solid rgba(215,64,64,0.7)';
+              if (s <= -30) return 'background:rgba(215,64,64,0.28); color:#F88; border:1px solid rgba(215,64,64,0.5)';
+              if (s <= -12) return 'background:rgba(220,100,30,0.22); color:#FF9A5C; border:1px solid rgba(220,100,30,0.4)';
+              if (s <= 0)   return 'background:rgba(204,168,91,0.16); color:#C8A83A; border:1px solid rgba(204,168,91,0.32)';
+              if (s <= 15)  return 'background:rgba(80,160,100,0.15); color:#7BC891; border:1px solid rgba(46,160,67,0.25)';
               return              'background:rgba(46,160,67,0.25); color:#42C65D; border:1px solid rgba(46,160,67,0.4)';
             };
 
