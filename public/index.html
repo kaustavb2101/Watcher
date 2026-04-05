@@ -4121,45 +4121,14 @@ Use telegraphic brevity. No fluff.
         <div class="card-h" style="margin-bottom:10px;">
           <span class="card-h-l">🗺️ Regional Risk Mapping</span>
         </div>
-        <div class="regional-grid" style="display:grid; grid-template-columns: 2fr 1fr; gap:15px; align-items:start;">
+        <div class="regional-grid" style="display:grid; grid-template-columns: 1fr; gap:15px; align-items:start;">
           
           <!-- Left Site: SVG Map -->
           <div id="svgMap" style="background:var(--paper2); border-radius:var(--r); min-height:480px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid var(--border); overflow:hidden">
 <!-- Map replaced by Regional Grid -->
 </div>
           
-          <!-- Right Side: Layers & Provinces -->
-          <div style="display:flex; flex-direction:column; gap:15px; max-height:500px">
-            
-            <!-- Map Layers Toggle -->
-            <div style="background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:var(--r);">
-              <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:8px; letter-spacing:0.05em">📊 MAP LAYERS</div>
-              <select id="mapLayerSelect" class="st" onchange="changeMapLayer()" style="font-size:12px; padding:8px; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:4px; width:100%; cursor:pointer;">
-                <option value="overall">Overall Risk Baseline</option>
-                <optgroup label="Live Satellite & Climate">
-                  <option value="crop:rice">🌾 GISTDA Rice 40m</option>
-                  <option value="crop:rubber">🌳 GISTDA Rubber 40m</option>
-                  <option value="crop:palm">🌴 GISTDA Oil Palm 40m</option>
-                  <option value="crop:sugarcane">🎋 GISTDA Sugarcane 40m</option>
-                  <option value="crop:cassava">🥔 GISTDA Cassava 40m</option>
-                  <option value="climate:drought">☀️ Open-Meteo Drought Index</option>
-                  <option value="climate:flood">🌊 Open-Meteo Flood Vulnerability</option>
-                  <option value="climate:pm25">🌫️ Open-Meteo PM2.5 Quality</option>
-                </optgroup>
-                <optgroup label="Affected Roles & Borrower Segments">
-                  <option value="occ:farmers">🚜 Ag-Vehicle Loans (Farmers)</option>
-                  <option value="occ:tappers">🛵 Title Loans (Tappers/Riders)</option>
-                  <option value="occ:SME">🏪 SME Loans (Retail/Tourism)</option>
-                  <option value="occ:factory">🏭 Personal Loans (Factory Workers)</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <!-- Province Details Scroll -->
-            <div class="wg" style="grid-template-columns: 1fr; flex:1; overflow-y:auto; padding-right:5px">
-              ${regHtml}
-            </div>
-          </div>
+          
         </div>
       </div>
   </div>`;
