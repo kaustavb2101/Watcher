@@ -28,10 +28,11 @@ const sedanRow    = findRow('Sedan (Not more than 7');
 const vanPickupRow= findRow('Van & Pick Up');
 const microbusRow = findRow('Microbus');
 
-// Find motorcycle row (รย.12)
-const motoRow = rows.find(r => String(r[0]).includes('รย. 12'));
+// Find motorcycle row (รย.12 and รย.17 public)
+const motoPrivRow = rows.find(r => String(r[0]).includes('รย.12'));
+const motoPubRow = rows.find(r => String(r[0]).includes('รย.17'));
 
-console.log('Motorcycle row label:', motoRow ? String(motoRow[0]).substring(0,60) : 'NOT FOUND');
+console.log('Motorcycle row label:', motoPrivRow ? String(motoPrivRow[0]).substring(0,60) : 'NOT FOUND');
 console.log('Column count:', headerRow.length);
 console.log('Provinces start at col 4 (index 4), after: Bangkok(2), Regional(3)');
 
@@ -132,7 +133,9 @@ for (let col = 2; col < headerRow.length; col++) {
   const total    = Number(grandTotalRow[col]) || 0;
   const sedan    = Number(sedanRow?.[col]) || 0;
   const pickup   = Number(vanPickupRow?.[col]) || 0;
-  const moto     = Number(motoRow?.[col]) || 0;
+  const motoPriv = Number(motoPrivRow?.[col]) || 0;
+  const motoPub  = Number(motoPubRow?.[col]) || 0;
+  const moto     = motoPriv + motoPub;
 
   totals[province] = total;
   breakdown[province] = { total, sedan, pickup, motorcycle: moto };

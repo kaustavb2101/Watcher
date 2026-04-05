@@ -56,14 +56,6 @@
         "api/dlt.js": {
             "memory": 512,
             "maxDuration": 10
-        },
-        "api/sync.js": {
-            "memory": 128,
-            "maxDuration": 10
-        },
-        "api/test.js": {
-            "memory": 128,
-            "maxDuration": 10
         }
     }
 }

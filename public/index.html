@@ -4119,9 +4119,8 @@ Use telegraphic brevity. No fluff.
           
           <!-- Left Site: SVG Map -->
           <div id="svgMap" style="background:var(--paper2); border-radius:var(--r); min-height:480px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid var(--border); overflow:hidden">
-            <div id="echartsMap" style="width:100%; height:480px; z-index: 1;"></div>
-            <div style="font-size:8px; color:var(--muted); margin-bottom:10px">REGIONAL AGRI-RISK GRADIENT</div>
-          </div>
+<!-- Map replaced by Regional Grid -->
+</div>
           
           <!-- Right Side: Layers & Provinces -->
           <div style="display:flex; flex-direction:column; gap:15px; max-height:500px">
@@ -4327,157 +4326,67 @@ Use telegraphic brevity. No fluff.
       }
     }
     async function renderRegionalMap(d, layer = 'overall') {
-      if (!d || !d.regionalImpact) return;
-      await initThailandMap();
-      const container = document.getElementById('echartsMap');
-      if (!container) return;
-      if (!thailandMapChart) {
-        thailandMapChart = echarts.init(container);
-        window.addEventListener('resize', () => thailandMapChart.resize());
-        thailandMapChart.on('click', (params) => {
-          if (params.componentType === 'series' && params.data) {
-            drillDownProvince(params.data.name, params.data.region || 'Region Indeterminate');
-          }
-        });
-      }
-
-      // Interpolate explicit AI province impacts across the full 77 provinces map
-      let liveData = null;
-      if (layer !== 'overall') {
-        thailandMapChart.showLoading({ text: '📡 Fetching Live Satellite/Climate Data...', color: '#CCA85B', textColor: '#F3EDE1', maskColor: 'rgba(12, 15, 24, 0.8)' });
-        try {
-          if (layer.startsWith('crop:')) liveData = await fetchGISTDAData(layer.replace('crop:', ''));
-          if (layer.startsWith('climate:')) liveData = await fetchGISTDAData(layer.replace('climate:', ''), true);
-        } catch (e) { console.warn('GISTDA fetch failed', e); }
-        thailandMapChart.hideLoading();
-      }
-
-      const explicitPoints = d.regionalImpact.map(p => {
-        let scoreToUse = null;
-        if (layer === 'overall') {
-          scoreToUse = p.impactScore;
-        } else if (layer.startsWith('crop:')) {
-          const target = layer.replace('crop:', '').toLowerCase();
-          const hasCrop = (p.affectedCrops || []).some(c => c.toLowerCase().includes(target));
-          if (hasCrop) scoreToUse = p.impactScore;
-        } else if (layer.startsWith('occ:')) {
-          const type = layer.replace('occ:', '');
-          let keywords = [];
-          if (type === 'farmers') keywords = ['farmer', 'cutter', 'crew', 'agri'];
-          if (type === 'tappers') keywords = ['tapper', 'rubber'];
-          if (type === 'riders') keywords = ['rider', 'delivery'];
-          if (type === 'drivers') keywords = ['driver', 'trucker', 'taxi'];
-          if (type === 'factory') keywords = ['factory', 'mill', 'technician', 'processor', 'manufacturing'];
-          if (type === 'construction') keywords = ['construction', 'laborer', 'builder'];
-          if (type === 'tourism') keywords = ['hotel', 'tour', 'guide', 'hospitality', 'restaurant'];
-          if (type === 'fishers') keywords = ['fisher', 'seafood', 'trawler'];
-          const hasOcc = (p.criticalOccupations || []).some(o => keywords.some(k => o.toLowerCase().includes(k)));
-          if (hasOcc) scoreToUse = p.impactScore;
-        }
-        return { name: p.province, value: scoreToUse, region: p.region, riskFactor: p.riskFactor };
-      }).filter(p => p.value !== null);
-
-      const features = echarts.getMap('thailand').geoJson.features;
-      const geoProvinces = features.map(f => f.properties.name);
-
-      const dataPoints = geoProvinces.map(provName => {
-        const explicit = explicitPoints.find(dp => dp.name.toLowerCase() === provName.toLowerCase() || dp.name.toLowerCase().includes(provName.toLowerCase().replace(' ', '')));
-        let inferredScore = null;
-        let inferredRisk = "Interpolated regional average.";
-
-        // If a specific layer is selected, use LIVE DATA mapped to the region
-        if (layer !== 'overall' && liveData) {
-          let rMatch = 'Central';
-          if (['Northeast', 'Ubon', 'Nong', 'Khon', 'Roiet'].some(x => provName.toLowerCase().includes(x.toLowerCase()))) rMatch = 'NE';
-          if (['South', 'Surat', 'Phuket', 'Krabi', 'Songkhla'].some(x => provName.toLowerCase().includes(x.toLowerCase()))) rMatch = 'South';
-
-          const hub = liveData.find(h => h.region === rMatch) || liveData.find(h => h.region === 'Central');
-          if (hub) inferredScore = layer.startsWith('climate:drought') ? -hub.val : hub.val; // invert drought to visualize as risk
-          inferredRisk = "Live Satellite/Ground Index";
-        }
-
-        if (inferredScore === null && explicit) return explicit;
-
-        if (inferredScore === null && layer === 'overall') {
-          inferredScore = (d.impactScore || 0) * 0.5; // Dampened national
-        } else if (inferredScore === null && layer.startsWith('crop:')) {
-          const crop = layer.replace('crop:', '');
-          if (crop === 'rice' && ['Northeast', 'Central', 'North'].some(r => provName.includes(r))) inferredScore = d.agriculturalImpact?.find(c => c.crop.toLowerCase().includes('rice'))?.impactScore;
-          if (crop === 'rubber' && ['South', 'East'].some(r => provName.includes(r))) inferredScore = d.agriculturalImpact?.find(c => c.crop.toLowerCase().includes('rubber'))?.impactScore;
-          if (crop === 'cassava' && ['Northeast'].some(r => provName.includes(r))) inferredScore = d.agriculturalImpact?.find(c => c.crop.toLowerCase().includes('cassava'))?.impactScore;
-          if (crop === 'sugarcane' && ['Central', 'West'].some(r => provName.includes(r))) inferredScore = d.agriculturalImpact?.find(c => c.crop.toLowerCase().includes('sugar'))?.impactScore;
-        } else if (inferredScore === null && layer.startsWith('occ:')) {
-          inferredScore = (d.impactScore || 0) * 0.3;
-        }
-
-        return {
-          name: provName,
-          value: (inferredScore !== null && inferredScore !== undefined) ? inferredScore : 0,
-          region: "Interpolated",
-          riskFactor: (inferredScore === 0 || inferredScore === null || inferredScore === undefined) ? "Minimal exposure to active layer." : inferredRisk
+        if (!d || !d.regionalImpact) return;
+        
+        const REGIONS = {
+          "North": ["Chiang Mai", "Lamphun", "Lampang", "Uttaradit", "Phrae", "Nan", "Phayao", "Chiang Rai", "Mae Hong Son", "Nakhon Sawan", "Uthai Thani", "Kamphaeng Phet", "Tak", "Sukhothai", "Phitsanulok", "Phichit", "Phetchabun"],
+          "Northeast": ["Nakhon Ratchasima", "Buri Ram", "Surin", "Si Sa Ket", "Ubon Ratchathani", "Yasothon", "Chaiyaphum", "Amnat Charoen", "Bueng Kan", "Nong Bua Lam Phu", "Khon Kaen", "Udon Thani", "Loei", "Nong Khai", "Maha Sarakham", "Roi Et", "Kalasin", "Sakon Nakhon", "Nakhon Phanom", "Mukdahan"],
+          "Central": ["Bangkok", "Samut Prakan", "Nonthaburi", "Pathum Thani", "Nakhon Pathom", "Samut Sakhon", "Phra Nakhon Si Ayutthaya", "Ang Thong", "Lop Buri", "Sing Buri", "Chai Nat", "Saraburi", "Nakhon Nayok"],
+          "East": ["Chon Buri", "Rayong", "Chanthaburi", "Trat", "Chachoengsao", "Prachin Buri", "Sa Kaeo"],
+          "West": ["Ratchaburi", "Kanchanaburi", "Suphan Buri", "Phetchaburi", "Prachuap Khiri Khan"],
+          "South": ["Chumphon", "Ranong", "Surat Thani", "Nakhon Si Thammarat", "Krabi", "Phang Nga", "Phuket", "Phatthalung", "Trang", "Pattani", "Yala", "Narathiwat", "Songkhla", "Satun"]
         };
-      });
-      const option = {
-        tooltip: {
-          trigger: 'item',
-          backgroundColor: 'rgba(12, 15, 24, 0.95)',
-          borderColor: '#CFC3AA',
-          textStyle: {
-            color: '#F3EDE1',
-            fontSize: 12,
-            fontFamily: 'Noto Sans Thai'
-          },
-          formatter: function (params) {
-            if (isNaN(params.value)) {
-              return '<strong style="color:var(--gold)">' + params.name + '</strong><br/>No directed risk model applied.';
+
+        const container = document.getElementById('svgMap');
+        if (!container) return;
+
+        // Baseline global impact from scenario
+        const globalImpact = d.impactScore || 0;
+        const baselineModifier = window.OIL_SLIDER_DELTA || 0; // Support slider
+
+        let gridHtml = `<div id="regionalHeatGrid" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; width:100%; align-items:start; padding:10px; box-sizing:border-box;">`;
+
+        for (const [rName, pList] of Object.entries(REGIONS)) {
+            let pData = pList.map(prov => {
+                // Determine explicit AI score or interpolate
+                let explicit = d.regionalImpact.find(ep => ep.province === prov || ep.region === rName);
+                let score = explicit ? explicit.impactScore : globalImpact * 0.8; 
+                
+                // Incorporate Oil Slider delta (arbitrary modifier for preview: -$2 per $10 oil spike)
+                score += (baselineModifier * -0.4);
+
+                let totalVehicles = window.DLT_LOOKUP ? window.DLT_LOOKUP(prov) : 0;
+                return { name: prov, score: score, totalVehicles: totalVehicles };
+            });
+
+            // "Subsequent rows are the provinces under the specific region sorted by vehicle population size"
+            pData.sort((a, b) => b.totalVehicles - a.totalVehicles);
+
+            let avgScore = pData.length > 0 ? (pData.reduce((s, p) => s + p.score, 0) / pData.length) : 0;
+            
+            const getHeatClass = (s) => s < -20 ? 'background:rgba(215,64,64,0.25); color:#F86666; border:1px solid rgba(215,64,64,0.4)' : s > 5 ? 'background:rgba(46,160,67,0.2); color:#42C65D; border:1px solid rgba(46,160,67,0.3)' : 'background:rgba(204,168,91,0.15); color:var(--gold); border:1px solid rgba(204,168,91,0.3)';
+
+            gridHtml += `<div class="region-col" style="display:flex; flex-direction:column; gap:6px;">
+                <div class="reg-head" style="${getHeatClass(avgScore)}; padding:8px; border-radius:6px; font-weight:bold; text-align:center; box-shadow:0 0 10px rgba(0,0,0,0.5);">
+                    <div style="font-size:12px; font-weight:800; letter-spacing:0.05em">${rName.toUpperCase()}</div>
+                    <div style="font-size:10px; opacity:0.8; margin-top:2px">Avg Impact: ${avgScore>0?'+':''}${avgScore.toFixed(0)}</div>
+                </div>`;
+            
+            for (const p of pData) {
+                gridHtml += `<div class="prov-card" onclick="drillDownProvince('${p.name}', '${rName}')" style="${getHeatClass(p.score)}; cursor:pointer; padding:6px 8px; font-size:11px; border-radius:4px; display:flex; justify-content:space-between; transition: 0.2s;">
+                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65px;" title="${p.name}">${p.name}</span>
+                    <strong style="font-family:monospace; margin-left:5px">${p.score.toFixed(1)}</strong>
+                </div>`;
             }
-            const dp = dataPoints.find(d => d.name === params.name);
-            const rFactor = dp ? dp.riskFactor : '';
-            return '<strong style="color:var(--gold)">' + params.name + '</strong><br/>Risk Score: ' + params.value + '<br/>' + (rFactor ? '<small style="color:#9A8F80">' + rFactor + '</small>' : '');
-          }
-        },
-        visualMap: {
-          min: -100,
-          max: 100,
-          text: ['High Risk', 'Opportunity'],
-          realtime: false,
-          calculable: true,
-          inRange: {
-            color: ['#8B1D2F', '#B84C1A', '#EDE5D4', '#1A6B3C']
-          },
-          textStyle: {
-            color: '#7A7060',
-            fontSize: 10
-          },
-          itemWidth: 10,
-          itemHeight: 60,
-          right: '5%',
-          bottom: '5%'
-        },
-        series: [{
-          name: 'Risk',
-          type: 'map',
-          map: 'thailand',
-          roam: true,
-          zoom: 1.2,
-          itemStyle: {
-            borderColor: 'rgba(207, 195, 170, 0.5)',
-            areaColor: '#F8F3E8',
-            borderWidth: 0.5
-          },
-          emphasis: {
-            itemStyle: {
-              areaColor: '#D4AB52',
-              borderColor: '#0C0F18',
-              borderWidth: 1
-            }
-          },
-          data: dataPoints
-        }]
-      };
-      thailandMapChart.setOption(option);
-    }
-    async function fetchGISTDAData(type = 'rice', isClimate = false) {
+            gridHtml += `</div>`;
+        }
+        gridHtml += `</div>`;
+
+        container.style.border = 'none';
+        container.style.background = 'transparent';
+        container.innerHTML = gridHtml;
+      }
+      async function fetchGISTDAData(type = 'rice', isClimate = false) {
       // Representative coordinates for major Hubs
       const hubs = [{
         region: 'NE',
