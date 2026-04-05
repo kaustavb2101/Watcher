@@ -16,7 +16,7 @@ export const TOURISM_RECORDS = {
   "Nakhon Ratchasima": { arrivals: 150200, occupancyPct: 54.2, dependencyIndex: 0.12 },
   "Khon Kaen": { arrivals: 120500, occupancyPct: 58.6, dependencyIndex: 0.15 },
   "Udon Thani": { arrivals: 95000, occupancyPct: 52.8, dependencyIndex: 0.18 },
-  "Sisaket": { arrivals: 32000, occupancyPct: 42.5, dependencyIndex: 0.08 },
+  "Si Sa Ket": { arrivals: 32000, occupancyPct: 42.5, dependencyIndex: 0.08 },
 };
 
 export const TOURISM_META = {

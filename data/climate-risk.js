@@ -21,7 +21,7 @@ export const CLIMATE_RISK_RECORDS = {
   'Krabi': { pm25: 0.25, flood: 0.70, drought: 0.15 },
   'Songkhla': { pm25: 0.40, flood: 0.85, drought: 0.10 },
   'Phuket': { pm25: 0.30, flood: 0.60, drought: 0.10, storm: 0.70 },
-  'Ayutthaya': { pm25: 0.75, flood: 0.98, drought: 0.20 }, // Historical high flood risk
+  'Phra Nakhon Si Ayutthaya': { pm25: 0.75, flood: 0.98, drought: 0.20 }, // Historical high flood risk
   'Buri Ram': { pm25: 0.50, flood: 0.30, drought: 0.90 }, // High drought risk
 };
 

@@ -233,6 +233,9 @@ export default async function handler(req) {
             headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' }
         });
     }
+    if (req.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
 
     // Fetch all provincial economic data in parallel
     const [gppResult, debtResult, agriResult, wbHousehold, botDebt, oaePrices] = await Promise.all([
@@ -356,14 +359,14 @@ export default async function handler(req) {
 }
 
 function getRegionForProvince(prov) {
-    const northEast = ['ขอนแก่น','อุดรธานี','นครราชสีมา','อุบลราชธานี','บุรีรัมย์','สุรินทร์','ศรีสะเกษ','มหาสารคาม','ร้อยเอ็ด','กาฬสินธุ์','สกลนคร','นครพนม','มุกดาหาร','ยโสธร','อำนาจเจริญ','หนองคาย','หนองบัวลำภู','เลย','บึงกาฬ','ชัยภูมิ'];
-    const north = ['เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำปาง','ลำพูน','แพร่','น่าน','พะเยา','ตาก','สุโขทัย','พิษณุโลก','เพชรบูรณ์','กำแพงเพชร','พิจิตร','นครสวรรค์','อุทัยธานี','อุตรดิตถ์'];
-    const south = ['สงขลา','สุราษฎร์ธานี','นครศรีธรรมราช','ภูเก็ต','กระบี่','พังงา','ตรัง','สตูล','ยะลา','ปัตตานี','นราธิวาส','ชุมพร','ระนอง','พัทลุง'];
-    const east  = ['ชลบุรี','ระยอง','ฉะเชิงเทรา','จันทบุรี','ตราด','ปราจีนบุรี','สระแก้ว'];
+    const northEast = ['Nakhon Ratchasima','Ubon Ratchathani','Khon Kaen','Udon Thani','Buri Ram','Surin','Si Sa Ket','Maha Sarakham','Roi Et','Kalasin','Sakon Nakhon','Nakhon Phanom','Mukdahan','Yasothon','Amnat Charoen','Nong Khai','Nong Bua Lam Phu','Loei','Bueng Kan','Chaiyaphum'];
+    const north = ['Chiang Mai','Chiang Rai','Mae Hong Son','Lampang','Lamphun','Phrae','Nan','Phayao','Tak','Sukhothai','Phitsanulok','Phetchabun','Kamphaeng Phet','Phichit','Nakhon Sawan','Uthai Thani','Uttaradit'];
+    const south = ['Songkhla','Surat Thani','Nakhon Si Thammarat','Phuket','Krabi','Phang Nga','Trang','Satun','Yala','Pattani','Narathiwat','Chumphon','Ranong','Phatthalung'];
+    const east  = ['Chon Buri','Rayong','Chachoengsao','Chanthaburi','Trat','Prachin Buri','Sa Kaeo'];
     const p = prov.trim();
-    if (northEast.some(n => p.includes(n) || n.includes(p))) return 'Northeast';
-    if (north.some(n => p.includes(n) || n.includes(p))) return 'North';
-    if (south.some(n => p.includes(n) || n.includes(p))) return 'South';
-    if (east.some(n => p.includes(n) || n.includes(p))) return 'East';
+    if (northEast.includes(p)) return 'Northeast';
+    if (north.includes(p)) return 'North';
+    if (south.includes(p)) return 'South';
+    if (east.includes(p)) return 'East';
     return 'Central';
 }

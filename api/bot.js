@@ -69,6 +69,9 @@ export default async function handler(req) {
             headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' }
         });
     }
+    if (req.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
 
     const hIR    = BOT_KEY   ? { 'Authorization': BOT_KEY,   'Accept': 'application/json' } : { 'Accept': 'application/json' };
     const hStats = BOT_STATS ? { 'Authorization': BOT_STATS, 'Accept': 'application/json' } : hIR;

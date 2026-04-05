@@ -81,6 +81,9 @@ export default async function handler(req) {
       headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' }
     });
   }
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+  }
 
   // Process the pre-loaded static data — no I/O, runs in microseconds
   const provinceMap = {};
@@ -167,7 +170,7 @@ export default async function handler(req) {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400',
+      'Cache-Control': 's-maxage=300, stale-while-revalidate=60',
     },
   });
 }

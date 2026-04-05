@@ -6,6 +6,12 @@ export const config = {
 };
 
 export default async function handler(req) {
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    }
+    if (req.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
     const url = new URL(req.url);
     const region = url.searchParams.get('region') || 'รวม'; // Default to total country
     const activity = url.searchParams.get('activity');
@@ -49,7 +55,7 @@ export default async function handler(req) {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 's-maxage=3600, stale-while-revalidate'
+                'Cache-Control': 's-maxage=300, stale-while-revalidate=60'
             }
         });
 

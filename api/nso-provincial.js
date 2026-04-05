@@ -104,6 +104,9 @@ export default async function handler(req) {
             }
         });
     }
+    if (req.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
 
     // Build province records from the static knowledge base
     const provinces = Object.entries(PROVINCE_META).map(([nameThai, meta]) => {
@@ -157,7 +160,7 @@ export default async function handler(req) {
         headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
-            'Cache-Control': 's-maxage=86400, stale-while-revalidate=604800',
+            'Cache-Control': 's-maxage=300, stale-while-revalidate=60',
         },
     });
 }

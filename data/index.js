@@ -19,6 +19,7 @@ import { HOUSEHOLD_DEBT_RECORDS, DEBT_META } from './household-debt.js';
 import { INFLATION_RECORDS } from './inflation-detail.js';
 import { TOURISM_RECORDS, TOURISM_META } from './tourism-intelligence.js';
 import { GPP_RECORDS, GPP_META } from './provincial-gpp.js';
+import { DLT_NEW_RECORDS, DLT_NEW_META } from './dlt-new-registrations.js';
 
 export const KnowledgeBase = {
   provinces: {
@@ -42,7 +43,8 @@ export const KnowledgeBase = {
   debt: { records: HOUSEHOLD_DEBT_RECORDS, meta: DEBT_META },
   inflation: INFLATION_RECORDS,
   tourism_intl: { records: TOURISM_RECORDS, meta: TOURISM_META },
-  gpp: { records: GPP_RECORDS, meta: GPP_META }
+  gpp: { records: GPP_RECORDS, meta: GPP_META },
+  dltNew: { records: DLT_NEW_RECORDS, meta: DLT_NEW_META }
 };
 
 export default KnowledgeBase;

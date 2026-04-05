@@ -3,6 +3,12 @@ export const config = {
 };
 
 export default async function handler(req) {
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    }
+    if (req.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
     const url = new URL(req.url);
     const path = url.searchParams.get('path');
 
@@ -11,6 +17,10 @@ export default async function handler(req) {
             status: 400,
             headers: { 'Content-Type': 'application/json' }
         });
+    }
+
+    if (!path || !path.startsWith('/')) {
+        return new Response(JSON.stringify({ error: 'Invalid path parameter' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
 
     try {

@@ -152,7 +152,7 @@ export default async function handler(req) {
     const pillarFilter = searchParams.get('pillar') || 'full';
 
     // ── Parallel fetch all data sources ─────────────────────────────────────
-    console.time(`[TMLI] Parallel Grounding (${pillarFilter})`);
+    if (typeof console.time === 'function') console.time(`[TMLI] Parallel Grounding (${pillarFilter})`);
     
     // BUILD DYNAMIC FETCH SET
     const fetchSet = [];
@@ -202,7 +202,7 @@ export default async function handler(req) {
     }
 
     const responses = await Promise.allSettled(fetchSet);
-    console.timeEnd(`[TMLI] Parallel Grounding (${pillarFilter})`);
+    if (typeof console.timeEnd === 'function') console.timeEnd(`[TMLI] Parallel Grounding (${pillarFilter})`);
 
     // MAP RESULTS BACK TO VARIABLES
     let idx = 0;
@@ -559,7 +559,7 @@ export default async function handler(req) {
 
     // Use dlt.records for cumulative total (size field per record)
     dltRecords.forEach(r => {
-      const cat = mapType(r.type || r.vehicle_type || '');
+      const cat = mapType(r.category || r.type || r.vehicle_type || '');
       const sz = parseFloat(r.size || r.total || r.count || 0);
       vehicleGrounding.cumulative.total += sz;
       vehicleGrounding.cumulative.byType[cat] = (vehicleGrounding.cumulative.byType[cat] || 0) + sz;
@@ -567,7 +567,7 @@ export default async function handler(req) {
 
     // New monthly derived from growth field if present
     dltRecords.forEach(r => {
-      const cat = mapType(r.type || r.vehicle_type || '');
+      const cat = mapType(r.category || r.type || r.vehicle_type || '');
       const growth = parseFloat(r.growth || r.new_monthly || 0);
       vehicleGrounding.newMonthly.total += growth;
       vehicleGrounding.newMonthly.byType[cat] = (vehicleGrounding.newMonthly.byType[cat] || 0) + growth;
@@ -597,7 +597,7 @@ export default async function handler(req) {
         headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
-            'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400'
+            'Cache-Control': 's-maxage=300, stale-while-revalidate=60'
         }
     });
 }

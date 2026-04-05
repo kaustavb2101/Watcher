@@ -695,7 +695,10 @@
 
     .pill:hover {
       border-color: var(--gold);
-      color: var(--gold3)
+      color: var(--gold3);
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+      transition: all 0.15s ease;
     }
 
     /* api notice */
@@ -2177,8 +2180,8 @@
     /* ─── TOAST ──────────────────────────────── */
     #toast {
       position: fixed;
-      bottom: 22px;
-      right: 22px;
+      bottom: 24px;
+      right: 24px;
       background: var(--ink);
       color: var(--paper);
       padding: 11px 16px;
@@ -2187,7 +2190,7 @@
       font-size: 11px;
       letter-spacing: .06em;
       box-shadow: var(--shadow-lg);
-      z-index: 900;
+      z-index: 9999;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -2473,16 +2476,19 @@
     .dd-close {
       position: sticky; top: 15px; left: calc(100% - 40px);
       width: 32px; height: 32px;
-      background: var(--card);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 50%;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       z-index: 10;
-      color: var(--muted);
+      color: var(--ink2);
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: var(--shadow-sm);
       transition: all 0.2s;
     }
-    .dd-close:hover { color: var(--gold); border-color: var(--gold); background: var(--bg); }
+    .dd-close:hover { color: var(--gold); border-color: var(--gold); background: var(--paper); box-shadow: var(--shadow); }
     .dd-h { padding: 0 24px 20px 24px; border-bottom: 1px solid var(--border); }
     .dd-prov { font-size: 24px; font-weight: 800; color: var(--gold); margin-bottom: 4px; }
     .dd-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; }
@@ -2600,7 +2606,11 @@
         <div id="liveOilValue" style="font-size:11px; color:var(--muted); background:var(--bg); padding:2px 6px; border-radius:4px; border:1px solid var(--border)">Fetching WTI...</div>
     </div>
     <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:5px;">Simulate Oil Price Shock (WTI $/bbl)</label>
-    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="document.getElementById('oilDisplay').innerText = this.value; window.OIL_SLIDER_DELTA = Number(this.value) - (window.OIL_SLIDER_BASE || 75);">
+    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="(function(v){var el=document.getElementById('oilDisplay');var base=window.OIL_SLIDER_BASE||75;var delta=Number(v)-base;el.innerText=v;var dl=document.getElementById('oilDeltaLabel');if(dl){dl.innerText=delta===0?'WTI ±$0/bbl':(delta>0?'WTI +$'+delta+'/bbl':'WTI −$'+Math.abs(delta)+'/bbl');dl.style.color=delta>0?'#EF9A9A':(delta<0?'#A5D6A7':'var(--muted)');}window.OIL_SLIDER_DELTA=delta;})(this.value);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+          <span id="oilDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#e2c97e;font-weight:700;min-width:28px;">75</span>
+          <span id="oilDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em;">WTI ±$0/bbl</span>
+        </div>
         <div class="sb-cat">⚔️ Geopolitical — Live 2026</div>
         <div class="ec" onclick="selEvent(this,'geo_hormuz')" role="button" tabindex="0"
           aria-label="US-Israel Strikes on Iran, Strait of Hormuz Closure">
@@ -2961,7 +2971,7 @@
             const apiPath = `/api/monthly-prices/commod?commod=${encodeURIComponent(t.query)}&limit=1`;
             const res = await fetch(`/api/nabc?path=${encodeURIComponent(apiPath)}`);
             if (!res.ok) return;
-            const json = await res.json();
+            let json; try { json = await res.json(); } catch(e) { return; }
             // The API returns { success: true, data: [...] }
             if (json && json.data && json.data.length > 0) {
               const item = json.data[0];
@@ -3252,7 +3262,7 @@
     /* ═══════════════════════════════════════════
        ANALYSIS ORCHESTRATION
     ═══════════════════════════════════════════ */
-    const STEPS = ['PARSING EVENT CONTEXT…', 'MAPPING THAI LABOUR STRUCTURE…', 'SCORING 18 PROFESSIONS…', 'ANALYSING 10 INDUSTRIES…', 'BUILDING WAGE IMPACT MODEL…', 'GENERATING TIMELINE…', 'DRAFTING RECOMMENDATIONS…', 'FINALISING OUTPUT…'];
+    const STEPS = ['🔎 Fetching macro data...', '📊 Running Overview Agent...', '👥 Analyzing labor impact...', '🌾 Processing commodities...', '🗺️ Mapping regional exposure...', '🧭 Building strategic outlook...', '✅ Finalizing report...'];
     let stepIdx = 0,
       stepTimer = null;
 
@@ -3573,7 +3583,7 @@
 
       // Cache result in localStorage with TTL
       try {
-        const cacheKey = `tmli_cache_${tag}_${title}`.replace(/\s+/g, '_').substring(0, 100);
+        const cacheKey = `tmli_cache_v2_${tag}_${title}`.replace(/\s+/g, '_').substring(0, 100);
         localStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() }));
       } catch (e) { /* localStorage full or disabled */ }
     }
@@ -4810,7 +4820,7 @@ Use telegraphic brevity. No fluff.
       const content = document.getElementById('dd-content');
       content.innerHTML = `<div class="dd-ai-row">
         ${dataStrip}
-        <div class="dd-ai-t">AI STRATEGIC DEEP-DIVE (FOR ${branches} BRANCHES IN ${name.toUpperCase()})</div>
+        <div class="dd-ai-t">AI STRATEGIC DEEP-DIVE (FOR ${branches} BRANCHES IN ${esc(name).toUpperCase()})</div>
         <div class="skeleton" style="height:110px; margin-bottom:15px"></div>
         <div class="skeleton" style="height:70px"></div>
       </div>`;
@@ -4840,7 +4850,7 @@ Use telegraphic brevity. No fluff.
             <div class="dd-ai-t">AUTOX BRANCH STRATEGY (${branches} LOCATIONS)</div>
             <div class="dd-card" style="border-left:3px solid var(--gold); background:rgba(212,171,82,0.05)">
               <strong>NGERN CHAIYO POSTURE:</strong> ${esc(d.autoXStrategy || '')}
-              <div style="margin-top:8px; font-size:12px; opacity:0.8">💡 <b>Opportunity for ${name}:</b> ${esc(d.localOpportunity || '')}</div>
+              <div style="margin-top:8px; font-size:12px; opacity:0.8">💡 <b>Opportunity for ${esc(name)}:</b> ${esc(d.localOpportunity || '')}</div>
             </div>
           </div>
         `;
@@ -4866,6 +4876,20 @@ Use telegraphic brevity. No fluff.
 
       function closeDrillDown() {
       document.getElementById('dd-overlay').classList.remove('vis');
+    }
+
+    function cancelCompare() {
+        // Alias for clearCompare — the compare panel CLEAR button calls this
+        clearCompare();
+    }
+
+    function closeSettings() {
+        const overlay = document.getElementById('settingsOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    function overlayClick(event, el) {
+        if (event.target === el) closeSettings();
     }
   </script>
   <script src="/assets/js/dlt-kb-client.js"></script>

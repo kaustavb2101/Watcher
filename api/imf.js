@@ -92,7 +92,7 @@ export default async function handler(req) {
     // Fetch all indicators in a single IMF DataMapper call
     const raw = await safeFetch(
         `${IMF_BASE}/data/${indicatorList}/${COUNTRY}`,
-        12000
+        8000
     );
 
     if (!raw) {

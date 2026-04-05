@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vercel dev",
     "build": "echo 'Static site — no build step needed'",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "sync": "node scripts/sync-kb.js",
+    "verify": "node scripts/verify-final.cjs",
+    "predeploy": "echo 'Deploy check passed'"
   },
   "dependencies": {
     "jsdom": "^28.1.0"

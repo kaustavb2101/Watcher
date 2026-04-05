@@ -20,9 +20,9 @@ export const HOUSEHOLD_DEBT_RECORDS = {
   // --- NORTHEASTERN (Agri-Stress Hubs) ---
   "Nakhon Ratchasima": { debtToIncome: 15.4, stressIndex: 0.72, mobility: 0.4 },
   "Khon Kaen": { debtToIncome: 14.8, stressIndex: 0.68, mobility: 0.45 },
-  "Sisaket": { debtToIncome: 18.2, stressIndex: 0.85, mobility: 0.3 },
+  "Si Sa Ket": { debtToIncome: 18.2, stressIndex: 0.85, mobility: 0.3 },
   "Surin": { debtToIncome: 17.5, stressIndex: 0.82, mobility: 0.35 },
-  "Buriram": { debtToIncome: 16.9, stressIndex: 0.78, mobility: 0.35 },
+  "Buri Ram": { debtToIncome: 16.9, stressIndex: 0.78, mobility: 0.35 },
   "Udon Thani": { debtToIncome: 15.1, stressIndex: 0.70, mobility: 0.4 },
   
   // --- NORTHERN ---

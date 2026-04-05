@@ -7,7 +7,7 @@
  */
 
 export const GISTDA_AGRI_RECORDS = [
-  { province: 'Ayutthaya', crop: 'rice', index: 0.82, status: 'Healthy', period: '2026-W12' },
+  { province: 'Phra Nakhon Si Ayutthaya', crop: 'rice', index: 0.82, status: 'Healthy', period: '2026-W12' },
   { province: 'Suphan Buri', crop: 'rice', index: 0.78, status: 'Healthy', period: '2026-W12' },
   { province: 'Nakhon Sawan', crop: 'sugarcane', index: 0.65, status: 'Moderate', period: '2026-W12' },
   { province: 'Kamphaeng Phet', crop: 'sugarcane', index: 0.61, status: 'Moderate', period: '2026-W12' },

@@ -10,6 +10,12 @@ import { standardizeProvince } from '../data/provinces.js';
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    }
+    if (req.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
     const url = new URL(req.url);
     const provinceParam = url.searchParams.get('province');
     const type = url.searchParams.get('type') || 'rice';
@@ -38,7 +44,7 @@ export default async function handler(req) {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 's-maxage=3600, stale-while-revalidate'
+                'Cache-Control': 's-maxage=300, stale-while-revalidate=60'
             }
         });
 
