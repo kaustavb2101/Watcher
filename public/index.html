@@ -422,7 +422,7 @@
     .ec-meta {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px;
-      color: rgba(245, 240, 232, .27);
+      color: rgba(245, 240, 232, .62);
       line-height: 1.3
     }
 
@@ -4029,12 +4029,15 @@ Use telegraphic brevity. No fluff.
       }).join('');
       const riskLevels = ['All', 'Critical', 'High', 'Medium', 'Low', 'Positive'];
       const filterChips = riskLevels.map((r, i) => `<span class="fc ${i === 0 ? 'on' : ''}" onclick="filterProfs(this,'${r}')">${r}</span>`).join('');
+      const profEmpty = (!d.professions || d.professions.length === 0)
+        ? `<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">No profession data available for this scenario.</div>`
+        : '';
       const profPane = `<div id="pane-professions" class="pane" role="tabpanel">
     <div class="filter-bar" role="group" aria-label="Filter professions by risk">
       <span>FILTER:</span>${filterChips}
       <button class="sort-btn" id="sortProfBtn" onclick="sortProfs(this)" aria-pressed="false">↓ SORT BY SCORE</button>
     </div>
-    <div class="pg" id="profGrid">${profHtml}</div>
+    ${profEmpty}${profHtml ? '<div class="pg" id="profGrid">' + profHtml + '</div>' : ''}
   </div>`;
 
       /* — INDUSTRIES PANE — */
@@ -4080,9 +4083,12 @@ Use telegraphic brevity. No fluff.
       <div class="ic-acts">${acts}</div>
     </div>`;
       }).join('');
+      const indEmpty = (!d.industries || d.industries.length === 0)
+        ? `<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">No industry data available for this scenario.</div>`
+        : '';
       const indPane = `<div id="pane-industries" class="pane" role="tabpanel">
     <div style="margin-bottom:11px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em">IMPACT SCORE: −100 = SEVERE DISRUPTION · +100 = STRONG GROWTH</div>
-    ${indHtml}
+    ${indEmpty}${indHtml}
   </div>`;
 
       /* — REGIONAL PANE — */
@@ -4163,11 +4169,14 @@ Use telegraphic brevity. No fluff.
       <td><span class="risk-badge ${riskClass(p.riskLevel || '')}">${esc(p.riskLevel || '')}</span></td>
     </tr>`;
       }).join('');
+      const tlEmpty = (!d.timeline || d.timeline.length === 0)
+        ? `<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">Timeline data unavailable.</div>`
+        : '';
       const tlPane = `<div id="pane-timeline" class="pane" role="tabpanel">
     <div class="g2">
       <div class="card">
         <div class="card-h"><span class="card-h-l">📅 Impact Timeline</span></div>
-        <div class="tl">${tlHtml}</div>
+        <div class="tl">${tlEmpty}${tlHtml}</div>
       </div>
       <div class="card">
         <div class="card-h"><span class="card-h-l">📋 Profession Summary</span></div>
@@ -4205,7 +4214,7 @@ Use telegraphic brevity. No fluff.
         <span style="font-size:8px; color:var(--blue)">LIVE THAILAND SKILL MAPPING API</span>
       </div>
       <div id="skillmapping-loader" style="padding:20px; text-align:center; color:var(--muted)">
-        <div class="spinner" style="margin:0 auto 10px"></div>
+        <div style="display:inline-block;width:14px;height:14px;border:2px solid rgba(184,148,58,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle;"></div>
         Discovering emerging careers...
       </div>
       <div id="skillmapping-results" class="g3" style="display:none; margin-top:10px"></div>
@@ -4329,16 +4338,38 @@ Use telegraphic brevity. No fluff.
         const globalImpact = d.impactScore || 0;
         const baselineModifier = window.OIL_SLIDER_DELTA || 0; // Support slider
 
-        let gridHtml = `<div id="regionalHeatGrid" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; width:100%; align-items:start; padding:10px; box-sizing:border-box;">`;
+        let gridHtml = `<div style="display:flex;gap:8px;margin-bottom:10px;font-size:9px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap;padding:0 10px;">
+          <span style="background:rgba(180,20,20,0.45);color:#FF6B6B;padding:2px 6px;border-radius:3px">&#9632; SEVERE &lt;&#8722;60</span>
+          <span style="background:rgba(215,64,64,0.30);color:#F86666;padding:2px 6px;border-radius:3px">&#9632; HIGH &#8722;35</span>
+          <span style="background:rgba(220,100,30,0.25);color:#FF9A5C;padding:2px 6px;border-radius:3px">&#9632; MOD &#8722;15</span>
+          <span style="background:rgba(204,168,91,0.18);color:#C8A83A;padding:2px 6px;border-radius:3px">&#9632; NEUTRAL</span>
+          <span style="background:rgba(46,160,67,0.25);color:#42C65D;padding:2px 6px;border-radius:3px">&#9632; GAIN &gt;+10</span>
+        </div>
+        <div id="regionalHeatGrid" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; width:100%; align-items:start; padding:10px; box-sizing:border-box;">`;
 
         for (const [rName, pList] of Object.entries(REGIONS)) {
             let pData = pList.map(prov => {
                 // Determine explicit AI score or interpolate
-                let explicit = d.regionalImpact.find(ep => ep.province === prov || ep.region === rName);
-                let score = explicit ? explicit.impactScore : globalImpact * 0.8; 
-                
-                // Incorporate Oil Slider delta (arbitrary modifier for preview: -$2 per $10 oil spike)
-                score += (baselineModifier * -0.4);
+                let explicit = (d.regionalImpact || []).find(ep => ep.province === prov || ep.province === prov.replace(' Metropolis',''));
+                // Build a region-average fallback from AI-returned provinces in the same region
+                const regionScores = (d.regionalImpact || []).filter(ep => ep.region === rName).map(ep => ep.impactScore);
+                const regionAvg = regionScores.length > 0 ? regionScores.reduce((a,b) => a+b, 0) / regionScores.length : globalImpact * 0.8;
+                // GPP hub-type modifier: AGRI provinces hit harder on commodity events, IND on trade/tech
+                const gppEntry = (window.GPP_KB || {})[prov] || (window.GPP_KB || {})[prov.replace(' Metropolis','')];
+                const hubMod = gppEntry ? (
+                  gppEntry.hubType === 'AGRI' ? (globalImpact < 0 ? -8 : 5) :
+                  gppEntry.hubType === 'IND'  ? (globalImpact < 0 ? -5 : 8) :
+                  gppEntry.hubType === 'TOUR' ? (globalImpact < 0 ? -6 : 4) : 0
+                ) : 0;
+                // DLT vehicle density modifier: high-vehicle provinces more exposed to oil/trade shocks
+                const dltEntry = (window.DLT_PROVINCE_TOTALS || {})[prov] || (window.DLT_PROVINCE_TOTALS || {})[prov.replace(' Metropolis','')];
+                const dltMod = dltEntry && dltEntry.total > 500000 ? (globalImpact < 0 ? -4 : 3) : 0;
+                // Small province-specific jitter from name hash so adjacent same-region provinces differ visually
+                const nameHash = prov.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xffff, 0);
+                const jitter = ((nameHash % 11) - 5);  // -5 to +5
+                let score = explicit ? explicit.impactScore : Math.round(regionAvg + hubMod + dltMod + jitter);
+                score += Math.round((window.OIL_SLIDER_DELTA || 0) * -0.4);
+                score = Math.max(-100, Math.min(100, score));
 
                 let totalVehicles = window.DLT_LOOKUP ? window.DLT_LOOKUP(prov) : 0;
                 return { name: prov, score: score, totalVehicles: totalVehicles };
@@ -4349,7 +4380,14 @@ Use telegraphic brevity. No fluff.
 
             let avgScore = pData.length > 0 ? (pData.reduce((s, p) => s + p.score, 0) / pData.length) : 0;
             
-            const getHeatClass = (s) => s < -20 ? 'background:rgba(215,64,64,0.25); color:#F86666; border:1px solid rgba(215,64,64,0.4)' : s > 5 ? 'background:rgba(46,160,67,0.2); color:#42C65D; border:1px solid rgba(46,160,67,0.3)' : 'background:rgba(204,168,91,0.15); color:var(--gold); border:1px solid rgba(204,168,91,0.3)';
+            const getHeatClass = (s) => {
+              if (s <= -60) return 'background:rgba(180,20,20,0.45); color:#FF6B6B; border:1px solid rgba(215,64,64,0.7)';
+              if (s <= -35) return 'background:rgba(215,64,64,0.30); color:#F86666; border:1px solid rgba(215,64,64,0.5)';
+              if (s <= -15) return 'background:rgba(220,100,30,0.25); color:#FF9A5C; border:1px solid rgba(220,100,30,0.45)';
+              if (s <= 0)   return 'background:rgba(204,168,91,0.18); color:var(--gold); border:1px solid rgba(204,168,91,0.35)';
+              if (s <= 10)  return 'background:rgba(80,160,100,0.15); color:#7BC891; border:1px solid rgba(46,160,67,0.25)';
+              return              'background:rgba(46,160,67,0.25); color:#42C65D; border:1px solid rgba(46,160,67,0.4)';
+            };
 
             gridHtml += `<div class="region-col" style="display:flex; flex-direction:column; gap:6px;">
                 <div class="reg-head" style="${getHeatClass(avgScore)}; padding:8px; border-radius:6px; font-weight:bold; text-align:center; box-shadow:0 0 10px rgba(0,0,0,0.5);">
@@ -4358,9 +4396,9 @@ Use telegraphic brevity. No fluff.
                 </div>`;
             
             for (const p of pData) {
-                gridHtml += `<div class="prov-card" onclick="drillDownProvince('${p.name}', '${rName}')" style="${getHeatClass(p.score)}; cursor:pointer; padding:6px 8px; font-size:11px; border-radius:4px; display:flex; justify-content:space-between; transition: 0.2s;">
+                gridHtml += `<div class="prov-card" onclick="drillDownProvince('${p.name}', '${rName}')" style="${getHeatClass(p.score)}; cursor:pointer; padding:6px 8px; font-size:11px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; transition: 0.2s;">
                     <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65px;" title="${p.name}">${p.name}</span>
-                    <strong style="font-family:monospace; margin-left:5px">${p.score.toFixed(1)}</strong>
+                    <span style="font-weight:800;font-size:10px;opacity:0.9;font-family:'IBM Plex Mono',monospace;flex-shrink:0;margin-left:4px">${p.score > 0 ? '+' : ''}${p.score}</span>
                 </div>`;
             }
             gridHtml += `</div>`;
