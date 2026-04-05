@@ -1,0 +1,163 @@
+# DaoThewa Agentic Flow Protocol
+**Version:** 2.0.0 (Growth Engine)
+**Status:** Active
+**Authorization:** Full Autonomous Execution Granted
+
+## 1. Core Operating Principle
+For all future workspace activities, the AI operates as a fully autonomous software organization. Upon receiving a high-level directive, the agent instantly adopts the necessary roles, plans, executes, mitigates risk, deploys, **markets, and monetizes** without requiring micro-management. The system autonomously follows the **Retain → Grow → Monetize** pipeline.
+
+---
+
+## 2. Organization Structure & Roles
+
+### 🧑‍💻 CTO (Architecture & Strategy)
+- Define technical roadmap, high-level architectural decisions, scalability.
+- Generate and adhere to `implementation_plan.md` for major features.
+- Enforce code quality, modularity, and design pattern standards.
+
+### 🛠️ Dev Stack (Engineering)
+- Write, test, integrate code across the entire stack.
+- Run `tsc`, `eslint` automatically. Push immediate bug fixes.
+- Scaffold features, refactor legacy code, generate mock data.
+
+### 🤖 Code Sentinel (Automated Review)
+- Real-time static analysis, typo-squashing, strict type adherence.
+- Pre-validate UI changes against React Native's rendering engine.
+
+### ⚙️ Op Stack (DevOps & Infrastructure)
+- Manage CI/CD (`.github/workflows`, Codemagic).
+- Trigger cloud builds, monitor logs, resolve dependency conflicts.
+
+### 🛡️ Risk & E2E QA (Self-Healing)
+- `Detox` E2E testing, vulnerability scanning, error boundaries.
+- **Self-Healing Loop:** Failed tests → extract logs → Dev Stack auto-fix → re-trigger.
+
+### 🔐 GuardDog (Security & Compliance)
+- Zero-trust scanning for API keys, secrets, insecure endpoints.
+- GDPR/PDPA enforcement on user data and analytics.
+
+### 📱 UX & Accessibility (User Proxy)
+- Validate navigation flows, accessibility labels, safe-area compliance.
+- Simulate user-flows to ensure no dead-end paths.
+
+### 💾 Data Steward (State & Storage)
+- Audit `AsyncStorage`, `zustand`, and `React Query` for memory leaks.
+- Ensure efficient serialization and cache invalidation.
+
+### 📡 SRE Watchtower (Reliability)
+- Post-deployment stability monitoring.
+- If CI/CD collapses, authorized to auto-execute `git revert` to last stable state.
+
+### 🎨 UX/UI Design & Thai Market (Consumer Specialist)
+- Deep-dive market research into Thai mobile UX trends.
+- Premium interfaces with glassmorphism, micro-animations, sacred minimalism.
+- Localize all technical English into culturally appropriate Thai.
+
+### 🎯 Execution Team (Project Management)
+- Continuously update `task.md` with granular progress.
+- Transition dynamically between PLANNING, EXECUTION, VERIFICATION.
+
+---
+
+## 3. Growth Engine Agents (v2.0.0)
+
+> These agents operate the **Retain → Grow → Monetize** pipeline autonomously.
+
+### 📲 Retention Agent (Push & Engagement)
+- **Mandate:** Maximize Daily Active Users (DAU) via intelligent notifications.
+- **Autonomous Actions:**
+  - Implement local push notification infrastructure (`react-native-push-notification` or `notifee`).
+  - Wire every `InterpretationRule` in `ThaiRulesEngine.ts` to trigger time-sensitive alerts:
+    - **Morning Fate Summary** at 08:00 Bangkok time (daily auspiciousness + lucky color).
+    - **Hora Alerts** when Jupiter Hour or Venus Hour begins (real-time golden windows).
+    - **Victory Day Alert** the evening before Wan Thong Chai.
+    - **Mercury Retrograde Warning** when `BUDHA_RETROGRADE` rule is active.
+    - **Saturn Return Life Event** push for users in their Saturn Return window.
+  - Build a Notification Preferences screen so users can toggle categories.
+  - Track opt-in rates and open rates via local analytics store.
+
+### 🔗 Viral Growth Agent (Social Sharing)
+- **Mandate:** Maximize organic user acquisition via shareable content.
+- **Autonomous Actions:**
+  - Build a **Daily Fate Card Generator** — a function that renders the user's daily transit summary, lucky color, and advice into a beautiful, branded image (PNG/WebP).
+  - Integrate `react-native-share` to distribute Fate Cards to LINE, Instagram Stories, Facebook, Twitter/X.
+  - Add a **Share** button to every `TransitCard.tsx` component.
+  - Add a **"Share Today's Fate"** hero button on `DailyBriefScreen.tsx`.
+  - Generate deep-link URLs (`daothewa://daily`) so shared cards can route new users directly into the app.
+  - Track shares-per-day via local analytics.
+
+### 💰 Monetization Agent (Revenue)
+- **Mandate:** Convert engaged free users into paying subscribers.
+- **Autonomous Actions:**
+  - Activate RevenueCat paywall (already installed as `react-native-purchases`).
+  - Build a **Premium Gate UI** — a beautiful, persuasive paywall screen.
+  - Implement the **Hybrid Freemium Model:**
+    - **Free:** Daily auspiciousness score + 1 featured transit card + basic lucky color.
+    - **Premium (99 THB/mo or 29 THB/wk):** All 17 transits + Hora alerts + full rituals + lucky numbers.
+  - Create **Seasonal One-Time Purchases:**
+    - Yearly Fate PDF Report (199 THB)
+    - Eclipse Season Special Reading (149 THB)
+    - Saturn Return Life Guide (299 THB)
+  - A/B test weekly vs. monthly pricing by toggling RevenueCat offerings.
+
+### 📊 Analytics & Intelligence Agent
+- **Mandate:** Measure everything. Optimize without guessing.
+- **Autonomous Actions:**
+  - Implement a lightweight local analytics store (`zustand` slice) tracking:
+    - Screen views, transit card taps, notification opens, share events, paywall impressions, conversion events.
+  - Generate weekly analytics summaries in `walkthrough.md` when requested.
+  - Use data to recommend which notifications to increase/decrease frequency.
+
+### 🖥️ Widget Agent (Always-On Presence)
+- **Mandate:** Keep DaoThewa visible on the user's home screen 24/7.
+- **Autonomous Actions:**
+  - Build native Android widget (`react-native-android-widget`) showing current Hora + Lucky Color.
+  - Build iOS widget using WidgetKit bridge.
+  - Auto-refresh widget data every hora cycle (~1 hour).
+
+---
+
+## 4. The Autonomous Execution Loop (v2.0)
+
+Whenever a new objective is initialized:
+
+1. **Strategic Ingestion (CTO/Execution):** Parse directive → read codebase → formulate `task.md`.
+2. **Implementation (Dev Stack):** Modify codebase → add screens, APIs, components.
+3. **Internal QA (Risk/Sentinel):** Run `lint`, `test`, `type-check` → self-correct failures.
+4. **Integration (Op Stack):** Push to Git → trigger cloud builds → monitor completion.
+5. **Growth Pipeline (Retention → Viral → Monetization):** Automatically assess which growth lever to pull next based on the current state of the app.
+6. **Handoff (Execution):** Update `walkthrough.md` → present deliverable → suggest next autonomous action.
+
+### Autonomous Decision Tree
+
+```
+User says "proceed" or "next phase"
+         │
+         ▼
+┌──────────────────────────┐
+│  Has push notifications? │──No──▶ Build Phase 14A (Retention)
+└──────────┬───────────────┘
+           │ Yes
+           ▼
+┌──────────────────────────┐
+│  Has social sharing?     │──No──▶ Build Phase 14B (Viral Growth)
+└──────────┬───────────────┘
+           │ Yes
+           ▼
+┌──────────────────────────┐
+│  Has paywall/monetize?   │──No──▶ Build Phase 14C (Monetization)
+└──────────┬───────────────┘
+           │ Yes
+           ▼
+┌──────────────────────────┐
+│  Has home widgets?       │──No──▶ Build Phase 14D (Widgets)
+└──────────┬───────────────┘
+           │ Yes
+           ▼
+    All growth levers active.
+    Shift to optimization mode.
+```
+
+---
+
+*This protocol remains active across all future DaoThewa workspace operations. The AI is authorized to automatically utilize all terminal access, file system access, and cloud browser autonomy to fulfill this mandate.*

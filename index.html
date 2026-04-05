@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMLI | Thailand Market Labor Intelligence Suite</title>
+  <meta name="description" content="TMLI by AutoX: Next-gen macro-labor intelligence grounded in real-time institutional data.">
+  
+  <!-- CSS Design System (Modular) -->
+  <link rel="stylesheet" href="/assets/css/saas-theme.css">
+  
+  <!-- Typography (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;700&family=Outfit:wght@600;800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- ECharts Library (External) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body class="theme-dark">
+
+  <!-- ASYNC TOP NAVBAR -->
+  <nav class="nav" role="navigation" aria-label="Main Navigation">
+    <div class="nav-l">
+      <div class="logo">TMLI <span>PRODUCTION</span></div>
+      <div class="clock" id="clock">-- --- ---- --:--:--</div>
+    </div>
+    <div class="nav-m">
+      <div class="nav-item on" onclick="switchGlobalTab('executive', this)">EXECUTIVE SUMMARY</div>
+      <div class="nav-item" onclick="switchGlobalTab('insights', this)">INTELLIGENCE</div>
+      <div class="nav-item" onclick="switchGlobalTab('forecasts', this)">FORECASTS</div>
+      <div class="nav-item" onclick="switchGlobalTab('occupations', this)">WORKFORCE</div>
+      <div class="nav-item" onclick="switchGlobalTab('industries', this)">INDUSTRIES</div>
+      <div class="nav-item" onclick="switchGlobalTab('regional', this)">REGIONAL</div>
+      <div class="nav-item" onclick="switchGlobalTab('branches', this)">BRANCHES</div>
+      <div class="nav-item" onclick="switchGlobalTab('products', this)">NC STRATEGY</div>
+      <div class="nav-item" onclick="switchGlobalTab('gistda', this)">GISTDA</div>
+      <!-- Additional modules hidden in overflow -->
+      <div class="nav-item" onclick="switchGlobalTab('reports', this)">REPORTS</div>
+      <div class="nav-item" onclick="switchGlobalTab('catalog', this)">CATALOG</div>
+    </div>
+    <div class="nav-r">
+      <div id="pillarStatus" class="pillar-status">
+        <div class="pillar-dot" id="dot-bot" title="Bank of Thailand (Stats/FX)">● BOT</div>
+        <div class="pillar-dot" id="dot-gistda" title="GISTDA (Satellite Crops)">● GISTDA</div>
+        <div class="pillar-dot" id="dot-nso" title="NSO (Labor/Business)">● NSO</div>
+        <div class="pillar-dot" id="dot-dlt" title="DLT (Vehicles)">● DLT</div>
+      </div>
+      <div id="botFigures" class="bot-figures">
+        <div class="bot-fig" id="fig-rate"><small>RATE</small> <span class="val">--</span></div>
+        <div class="bot-fig" id="fig-fx"><small>FX</small> <span class="val">--</span></div>
+        <div class="bot-fig" id="fig-npl"><small>NPL</small> <span class="val">--</span></div>
+      </div>
+      <button class="hbtn" onclick="showSettings()">SETTINGS</button>
+    </div>
+  </nav>
+
+  <!-- MAIN APPLICATION GRID -->
+  <main class="grid-layout">
+    
+    <!-- LEFT SIDEBAR: ACTIVE SCENARIOS -->
+    <aside class="sidebar" role="complementary" aria-label="Available Scenarios">
+      <div class="sidebar-h">
+        <span class="sidebar-h-l">ACTIVE SCENARIOS</span>
+        <span class="sidebar-h-r" id="eventCount">0 SCENARIOS LOADED</span>
+      </div>
+      <div class="search-box">
+        <input type="text" placeholder="Search scenarios (e.g. drought, fuel, strike)..." aria-label="Search scenarios" oninput="filterEvents(this.value)">
+      </div>
+      <div class="sidebar-scroll" id="eventGrid">
+        <!-- Events rendered via app-logic.js -->
+        <div style="padding:40px; text-align:center; opacity:0.3;">Initializing scenarios...</div>
+      </div>
+      <div class="sidebar-f">
+        <button class="add-event-btn" onclick="showCustomModal()">+ CUSTOM SCENARIO</button>
+      </div>
+    </aside>
+
+    <!-- RIGHT CONTENT AREA -->
+    <section class="content-view" id="mainContent">
+      
+      <!-- EMPTY INITIAL STATE -->
+      <div id="emptyState" class="empty-state vis">
+        <div class="empty-icon">📊</div>
+        <h1 style="font-family:'Outfit', sans-serif;">Thailand Labor Market Intelligence</h1>
+        <p>A data-grounded strategic engine for Ngern Chaiyo lending operations.</p>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 10px;">Select a scenario from the left to begin AI analysis or view the Baseline Executive Summary.</p>
+        <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center;">
+           <button class="hbtn p-btn" onclick="showHome()">VIEW INSTITUTIONAL BASELINE</button>
+           <button class="hbtn" onclick="showHelp()">METHODOLOGY</button>
+        </div>
+      </div>
+
+      <!-- LOADING STATE -->
+      <div id="loadState" class="load-state">
+        <div class="load-card">
+          <div class="load-anim">
+            <div class="la-orb"></div>
+            <div class="la-orb"></div>
+            <div class="la-orb"></div>
+          </div>
+          <div class="load-t">AUTOX INTELLIGENCE ENGINE ACTIVE</div>
+          <div class="load-p">TMLI is synthesizing real-time institutional data and mapping sectoral impacts...</div>
+          <div class="load-step" id="loadStep">DISCOVERING MACRO INDICATORS (WB/NSO)...</div>
+          <button class="bbn" style="margin-top: 25px; border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);" onclick="abortAnalysis()">CANCEL ENGINE</button>
+        </div>
+      </div>
+
+      <!-- ERROR STATE -->
+      <div id="errorState" class="error-state">
+        <div class="error-card">
+          <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+          <h2 id="errorMsg">AI Analysis Segment Failed</h2>
+          <p id="errorDetail" style="margin: 15px 0; color: var(--muted); font-size: 13px;">The institutional data layer is offline or the analysis engine is currently overloaded.</p>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button class="hbtn" onclick="retryLast()">RETRY ANALYSIS</button>
+            <button class="hbtn" onclick="showHome()">VIEW BASELINE</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS CONTAINER -->
+      <div id="results" class="results-view">
+        <!-- Rendered via render-engine.js -->
+      </div>
+
+    </section>
+  </main>
+
+  <!-- COMPARISON ACTION PANEL -->
+  <div id="comparePanel" class="compare-panel">
+    <div class="cp-info">
+      <div class="cp-h">COMPARATIVE SCENARIOS SELECTED</div>
+      <div id="compareList" class="cp-list"></div>
+    </div>
+    <div class="cp-btns">
+      <button class="hbtn" style="background:transparent; color:white; border-color:rgba(255,255,255,0.2)" onclick="clearCompare()">CLEAR</button>
+      <button class="run-cp-btn" id="runCompareBtn" onclick="runCompare()">ANALYZE SYNERGY</button>
+    </div>
+  </div>
+
+  <!-- CUSTOM SCENARIO MODAL -->
+  <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeCustomModal()">
+    <div class="modal">
+      <div class="modal-h">
+        <span>+ CREATE CUSTOM SCENARIO</span>
+        <button class="dd-close" onclick="closeCustomModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:15px">
+          <label style="font-size:11px; font-weight:800; color:var(--muted); display:block; margin-bottom:5px">TAG NAME</label>
+          <input type="text" id="customTag" placeholder="e.g. POLICY, CLIMATE, TRADE" style="width:100%; padding:10px; background:var(--bg); color:white; border:1px solid var(--border); border-radius:4px;">
+        </div>
+        <div style="margin-bottom:15px">
+          <label style="font-size:11px; font-weight:800; color:var(--muted); display:block; margin-bottom:5px">SCENARIO TITLE</label>
+          <input type="text" id="customTitle" placeholder="e.g. Energy Subsidy Removal Phase II" style="width:100%; padding:10px; background:var(--bg); color:white; border:1px solid var(--border); border-radius:4px;">
+        </div>
+        <div style="margin-bottom:15px">
+          <label style="font-size:11px; font-weight:800; color:var(--muted); display:block; margin-bottom:5px">CONTEXT & DATA (NGERN CHAIYO IMPACT)</label>
+          <textarea id="customCtx" placeholder="Describe the event, target segments, and expected economic shifts..." style="width:100%; height:120px; padding:10px; background:var(--bg); color:white; border:1px solid var(--border); border-radius:4px; font-family:inherit;"></textarea>
+        </div>
+        <button class="run-cp-btn" style="width:100%; padding:15px; background:var(--gold); color:var(--ink)" onclick="runCustom(); closeCustomModal();">LOAD & ANALYZE UNKNOWN EVENT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRILL-DOWN OVERLAY -->
+  <div id="dd-overlay" onclick="if(event.target===this)closeDrillDown()">
+    <div class="dd-box">
+      <button class="dd-close" onclick="closeDrillDown()" title="Close">&times;</button>
+      <div class="dd-h">
+        <div id="dd-province" class="dd-prov">Rayong</div>
+        <div id="dd-region" class="dd-sub">EASTERN ECONOMIC CORRIDOR</div>
+      </div>
+      <div id="dd-content" class="dd-body">
+        <div class="dd-ai-row"><!-- Content injected via app-logic.js --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS (Styled in saas-theme.css) -->
+  <div id="toast" role="alert" aria-live="polite">
+    <span id="toastIc">✓</span> <span id="toastMsg">Action completed successfully</span>
+  </div>
+
+  <!-- APPLICATION ASSETS (ORDER MATTERS) -->
+  <script src="/assets/js/telemetry.js"></script>
+  <script src="/assets/js/events.js"></script>
+  <script src="/assets/js/provinces.js"></script>
+  <script src="/assets/js/api-client.js"></script>
+  <script src="/assets/js/render-utils.js"></script>
+  <script src="/assets/js/render-map.js"></script>
+  <script src="/assets/js/render-engine.js"></script>
+  <script src="/assets/js/executive-home.js"></script>
+  <script src="/assets/js/app-logic.js"></script>
+
+  <!-- INLINE PAGE HELPERS (MINIMAL) -->
+  <script>
+    function showCustomModal() { document.getElementById('modalOverlay').classList.add('vis'); }
+    function closeCustomModal() { document.getElementById('modalOverlay').classList.remove('vis'); }
+    function showHelp() { showToast('Methodology document loading...', 'ok'); }
+    function showSettings() { showToast('Profile settings restricted to Administration.', 'error'); }
+    function abortAnalysis() { 
+      if (window.S && window.S.abortCtrl) window.S.abortCtrl.abort();
+      document.getElementById('loadState').classList.remove('vis');
+      showToast('Analysis Engine Terminated', 'error');
+    }
+  </script>
+
+</body>
+</html>

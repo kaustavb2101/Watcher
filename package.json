@@ -1,0 +1,15 @@
+{
+  "name": "thailand-macro-labor-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-powered Thai workforce impact analysis tool",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Static site — no build step needed'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "jsdom": "^28.1.0"
+  }
+}

@@ -1,0 +1,69 @@
+{
+    "outputDirectory": "public",
+    "functions": {
+        "api/analyze.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/data-enrichment.js": {
+            "memory": 512,
+            "maxDuration": 10
+        },
+        "api/nso.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/nso-provincial.js": {
+            "memory": 512,
+            "maxDuration": 10
+        },
+        "api/gistda.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/climate.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/nabc.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/skillmapping.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/oil-price.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/bot.js": {
+            "memory": 512,
+            "maxDuration": 10
+        },
+        "api/imf.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/commodities.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/provincial-economy.js": {
+            "memory": 256,
+            "maxDuration": 10
+        },
+        "api/dlt.js": {
+            "memory": 512,
+            "maxDuration": 10
+        },
+        "api/sync.js": {
+            "memory": 128,
+            "maxDuration": 10
+        },
+        "api/test.js": {
+            "memory": 128,
+            "maxDuration": 10
+        }
+    }
+}
