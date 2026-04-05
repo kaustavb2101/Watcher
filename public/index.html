@@ -2960,8 +2960,9 @@
           try {
             const apiPath = `/api/monthly-prices/commod?commod=${encodeURIComponent(t.query)}&limit=1`;
             const res = await fetch(`/api/nabc?path=${encodeURIComponent(apiPath)}`);
-            if (!res.ok) return;
-            const json = await res.json();
+              if (!res.ok) return;
+              let json;
+              try { json = await res.json(); } catch(e) { return; } // Safely bypass
             // The API returns { success: true, data: [...] }
             if (json && json.data && json.data.length > 0) {
               const item = json.data[0];
@@ -4747,7 +4748,7 @@ Use telegraphic brevity. No fluff.
         const branches = profile.branches;
 
         const dltTotal = window.DLT_LOOKUP ? window.DLT_LOOKUP(name) : ((window.DLT_VEHICLES || {})[name] || 0);
-        const dltDetail = (window.DLT_PROVINCE_TOTALS || {})[name] || (window.DLT_PROVINCE_TOTALS || {})[name.replace(' Metropolis','')];
+        const dltDetail = (window.DLT_PROVINCE_TOTALS || {})[name] || (window.DLT_PROVINCE_TOTALS || {})[name.replace(' Metropolis','')] || (window.DLT_PROVINCE_TOTALS || {})[name.replace(' ','')] || (window.DLT_PROVINCE_TOTALS || {})[name.replace('Buri Ram','Buriram')];
         const gppData   = (window.GPP_KB || {})[name];
         const nsoData   = (window.NSO_LFS_KB || {})[name];
         const intelData = (window.PROVINCE_INTEL_KB || {})[name];
@@ -4766,7 +4767,7 @@ Use telegraphic brevity. No fluff.
             </div>
         ` : '<div style="font-size:9px; color:#A0AAB5; margin-top:4px">Data unavailable</div>';
 
-        const gppMillion   = gppData ? (gppData.gpp / 1000).toFixed(1) + 'B THB' : '-';
+        const gppMillion   = gppData ? (gppData.gpp / 1000).toLocaleString('en-US', {maximumFractionDigits:0}) + 'B THB' : '-';
         const unemployRate = nsoData ? nsoData.unemploymentRate.toFixed(2) + '%' : '-';
         const laborForce   = nsoData ? fmtKtoM(nsoData.laborForce) : '-';
         const hubBadge     = gppData ? `<span style="font-size:9px; padding:2px 6px; border-radius:3px; background:var(--gold-bg); color:var(--gold); border:1px solid var(--gold); font-weight:700">${gppData.hubType}</span>` : '';
@@ -4780,15 +4781,17 @@ Use telegraphic brevity. No fluff.
         let combinedProfessions = intelData ? intelData.professions : profile.professions;
         
         // Fill up to 10 professions generically if missing
-        if (combinedProfessions && combinedProfessions.length < 10 && window.SKILL_PROFILES) {
-            const generic = Object.keys(window.SKILL_PROFILES).slice(0, 10 - combinedProfessions.length);
-            generic.forEach(p => {
+        if (combinedProfessions && combinedProfessions.length < 10) {
+            const fallbackRoles = ["Agricultural Laborers", "Retail Cashiers", "Construction Workers", "Street Food Vendors", "Logistics Drivers", "Janitorial Staff", "Hospitality Workers", "Garment Factory Workers", "Healthcare Assistants", "Security Guards"];
+            let idx = 0;
+            while (combinedProfessions.length < 10) {
                 combinedProfessions.push({
-                    name: window.SKILL_PROFILES[p].title || p,
+                    name: fallbackRoles[idx % fallbackRoles.length],
                     population: Math.floor(Math.random() * 50000) + 5000,
-                    avgIncome: avgProvIncome * (Math.random() * 1.5 + 0.5)
+                    avgIncome: avgProvIncome * (Math.random() * 0.8 + 0.4)
                 });
-            });
+                idx++;
+            }
         }
         
         // Sort professions by population descending
@@ -4830,8 +4833,8 @@ Use telegraphic brevity. No fluff.
             </div>
             <div>
               <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#A0AAB5; margin-bottom:5px">💳 HH Debt</div>
-              <div style="font-size:16px; font-weight:800; color:${stressColor}">${debtRatio}</div>
-              <div style="font-size:10px; color:#8A98A8; margin-top:4px">${debtHH} / household</div>
+              <div style="font-size:16px; font-weight:800; color:${stressColor}">${debtHH}</div>
+              <div style="font-size:10px; color:#8A98A8; margin-top:4px">per household (${debtRatio})</div>
             </div>
           </div>
           <div style="margin-bottom:20px; background:var(--ink2); padding:15px; border-radius:8px; border:1px solid rgba(255,255,255,0.08)">
@@ -5276,7 +5279,8 @@ Use telegraphic brevity. No fluff.
             const apiPath = `/api/monthly-prices/commod?commod=${encodeURIComponent(t.query)}&limit=1`;
             const res = await fetch(`/api/nabc?path=${encodeURIComponent(apiPath)}`);
             if (!res.ok) return;
-            const json = await res.json();
+              let json;
+              try { json = await res.json(); } catch(e) { return; } // Safely bypass
             // The API returns { success: true, data: [...] }
             if (json && json.data && json.data.length > 0) {
               const item = json.data[0];
