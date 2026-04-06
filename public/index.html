@@ -3774,7 +3774,7 @@ MACRO CONTEXT: ${ctx}
       if (agentType === 'overview') {
         return base + `\\n{\\n  "overallSentiment":"SEVERE CRISIS|HIGH RISK|ELEVATED RISK|MIXED|CAUTIOUS POSITIVE|STRONG POSITIVE",\\n  "impactScore":<-100 to +100>,\\n  "workersAtRisk":"<estimate>",\\n  "jobsLost":"<estimate>",\\n  "jobsCreated":"<estimate>",\\n  "gdpImpact":"<e.g. -0.8% GDP>",\\n  "timeHorizon":"<e.g. 6-18 months>",\\n  "headline":"<max 10 words>",\\n  "analysis":"<bullet: max 10 words>\\\\n\\\\n<bullet: max 10 words>",\\n  "keyInsights":[\\n    {"icon":"<emoji>","title":"<short>","bullets":["<max 8 words>"]}\\n  ],\\n  "costOfLiving":{\\n    "overallInflationImpact":"<%>",\\n    "foodPriceImpact":"<%>",\\n    "items":[{"item":"<name>","currentPrice":"<baht>","projectedChange":"<%>"}]\\n  }\\n}`;
       } else if (agentType === 'labor') {
-        return base + `GENERATE 18 professions, 10 industries, 8 wage impacts, and assess 6 vehicle types for AutoX loan portfolio NPL risk.\\n{\\n  "professions":[\\n    {"icon":"<emoji>","name":"<name>","workerCount":"<n>","avgWage":"<baht>","impactScore":<n>,"riskLevel":"Critical|High|Medium|Low|Positive","immediateImpact":"<max 8 words>","mediumTermImpact":"<max 8 words>","adaptationPaths":["<action>"],"tags":["<tag>"],"monthlyDisposableIncomeImpact":"<THB>"}\\n  ],\\n  "industries":[\\n    {"icon":"<emoji>","name":"<name>","gdpShare":"<%>","workforceSize":"<n>","impactScore":<n>,"verdict":"<3 words>","analysisBullets":["<max 10 words>"],"subOccupations":[{"name":"<role>","impact":<n>}],"keyActions":["<action>"],"monthlyDisposableIncomeImpact":"<THB>"}\\n  ],\\n  "wageImpacts":[\\n    {"icon":"<emoji>","profession":"<name>","currentWage":"<baht>","projectedChange":"<%>","outlook":"<max 10 words>"}\\n  ],\\n  "vehicleImpact":[\\n    {"type":"Motorcycle","icon":"🏍️","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<extra monthly burden in THB e.g. +฿800>","nplRateDelta":"<change e.g. +2.1%>","outlook":"<max 8 words>"},\\n    {"type":"Passenger Car","icon":"🚗","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.4%>","outlook":"<max 8 words>"},\\n    {"type":"Pickup Truck","icon":"🛻","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.8%>","outlook":"<max 8 words>"},\\n    {"type":"Agricultural Tractor","icon":"🚜","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +2.4%>","outlook":"<max 8 words>"},\\n    {"type":"Commercial Van / Minibus","icon":"🚐","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.2%>","outlook":"<max 8 words>"},\\n    {"type":"Ride-Hailing / Taxi","icon":"🚕","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.6%>","outlook":"<max 8 words>"}\\n  ]\\n}`;
+        return base + `GENERATE 18 professions, 10 industries, 8 wage impacts, and assess 6 vehicle types for AutoX loan portfolio NPL risk.\\n{\\n  "professions":[\\n    {"icon":"<emoji>","name":"<name>","workerCount":"<n>","avgWage":"<baht>","impactScore":<n>,"riskLevel":"Critical|High|Medium|Low|Positive","immediateImpact":"<max 8 words>","mediumTermImpact":"<max 8 words>","adaptationPaths":["<action>"],"tags":["<tag>"],"monthlyDisposableIncomeImpact":"<THB>"}\\n  ],\\n  "industries":[\\n    {"icon":"<emoji>","name":"<name>","gdpShare":"<%>","workforceSize":"<n>","impactScore":<n>,"verdict":"<3 words>","analysisBullets":["<max 10 words>"],"subOccupations":[{"name":"<role>","impact":<n>}],"keyActions":["<action>"],"monthlyDisposableIncomeImpact":"<THB>"}\\n  ],\\n  "wageImpacts":[\\n    {"icon":"<emoji>","profession":"<name>","currentWage":"<baht>","projectedChange":"<%>","outlook":"<max 10 words>"}\\n  ],\\n  "vehicleImpact":[\\n    {"type":"Motorcycle","icon":"🏍️","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<extra monthly burden in THB e.g. +฿800>","nplRateDelta":"<change e.g. +2.1%>","outlook":"<max 8 words>"},\\n    {"type":"Passenger Car","icon":"🚗","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.4%>","outlook":"<max 8 words>"},\\n    {"type":"Pickup Truck / Van","icon":"🛻","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.8%>","outlook":"<max 8 words>"},\\n    {"type":"Agricultural Tractor","icon":"🚜","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +2.4%>","outlook":"<max 8 words>"},\\n    {"type":"Commercial Bus & Van","icon":"🚐","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.2%>","outlook":"<max 8 words>"},\\n    {"type":"Taxi / Ride-Hailing","icon":"🚕","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.6%>","outlook":"<max 8 words>"}\\n  ]\\n}`;
       } else if (agentType === 'commodities') {
         return base + `\${nabcCtx}\\nCreate EXACTLY 10 commodities.\\n{\\n  "agriculturalImpact":[\\n    {"icon":"<emoji>","crop":"<crop>","farmersAffected":"<number>","currentPrice":"<current price per unit in baht>","projectedPriceChange":"<+12% to +18%>","impactScore":<-100 to +100>,"analysis":"<max 15 words>","costOfLivingEffect":"<max 10 words>"}\\n  ]\\n}`;
       } else if (agentType === 'strategy') {
@@ -4150,16 +4150,16 @@ MACRO CONTEXT: ${ctx}
         </div>`;
       }).join('');
 
-      // Vehicle portfolio stress — DLT KB counts + AI nplRisk/finance stress from labor agent
+      // Vehicle portfolio stress — DLT official totals (31 Mar 2026, 45.7M total registered)
       const DLT_REG_COUNTS = {
-        'Motorcycle':          '1.60M',
-        'Passenger Car':       '1.19M',
-        'Pickup Truck':        '0.58M',
-        'Agricultural Tractor':'42K',
-        'Commercial Van / Minibus': '38K',
-        'Ride-Hailing / Taxi': '7K'
+        'Motorcycle':               '23.3M',
+        'Passenger Car':            '12.6M',
+        'Pickup Truck / Van':       '6.95M',
+        'Agricultural Tractor':     '768K',
+        'Commercial Bus & Van':     '576K',
+        'Taxi / Ride-Hailing':      '196K'
       };
-      const vehOrder = ['Motorcycle','Passenger Car','Pickup Truck','Agricultural Tractor','Commercial Van / Minibus','Ride-Hailing / Taxi'];
+      const vehOrder = ['Motorcycle','Passenger Car','Pickup Truck / Van','Agricultural Tractor','Commercial Bus & Van','Taxi / Ride-Hailing'];
       const vehData = d.vehicleImpact || [];
       const vehicleCardHtml = vehData.length ? vehData.slice(0,6).map(v => {
         const rc = {'Critical':'#8B1D2F','High':'#B84C1A','Medium':'#B8943A','Low':'#1A6B3C'}[v.nplRisk] || '#B8943A';
@@ -4239,9 +4239,9 @@ MACRO CONTEXT: ${ctx}
       <div class="card" style="margin-bottom:0;">
         <div class="card-h" style="display:flex;justify-content:space-between;align-items:center;">
           <span class="card-h-l">🚗 VEHICLE PORTFOLIO STRESS</span>
-          <span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;">NPL RISK · DLT KB</span>
+          <span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;">NPL RISK · DLT MAR 2026</span>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.4;">AutoX loan exposure by vehicle class — fuel sensitivity &amp; NPL risk shift per event.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.4;">45.7M registered nationally · AutoX loan exposure by class — fuel sensitivity &amp; NPL risk per event.</div>
         <div style="margin-top:4px;">${vehicleCardHtml}</div>
       </div>
 
