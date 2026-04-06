@@ -4052,7 +4052,7 @@ MACRO CONTEXT: ${ctx}
     <div class="kpi" style="--kc:${sc}">
       <div class="kpi-lbl">Overall Sentiment</div>
       <div class="kpi-val" style="color:${sc};font-size:13px;line-height:1.2;">${esc(d.overallSentiment || '—')}</div>
-      <div class="kpi-sub">Score ${sign(s)}${s} / 100</div>
+      <div class="kpi-sub" style="font-style:italic;">AI-derived directional signal</div>
     </div>
     <div class="kpi" style="--kc:${gdpColor};border-left:3px solid ${gdpColor};background:rgba(0,0,0,0.03);">
       <div class="kpi-lbl" style="letter-spacing:.18em;">GDP IMPACT FORECAST</div>
