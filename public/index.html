@@ -4409,18 +4409,15 @@ MACRO CONTEXT: ${ctx}
         <div class="pc-l">
           <div class="pc-ic" aria-hidden="true">${p.icon || ''}</div>
           <div class="pc-name">${esc(p.name || '')}</div>
-          <div class="pc-count">${esc(fmtNum(p.workerCount) || '')} · ${esc(fmtNum(p.avgWage) || '')}</div>
+          <div class="pc-count">${esc(fmtNum(p.workerCount) || '')} · avg ฿${esc(fmtNum(p.avgWage) || '')}/mo</div>
         </div>
         <div class="pc-r">
-          <div class="pc-score" style="color:${pc2}">${sg}${p.impactScore || 0}</div>
+          <div class="pc-score" style="color:${pc2};font-size:13px;font-family:'IBM Plex Mono',monospace;">${esc(p.monthlyDisposableIncomeImpact || '—')}</div>
           <div class="risk-badge ${riskClass(p.riskLevel || '')}">${esc(p.riskLevel || '')}</div>
         </div>
       </div>
-      <div class="bar-track"><div class="bar-fill ${barClass(p.impactScore || 0)}" style="width:0" data-w="${pct(p.impactScore || 0)}"></div></div>
       <div class="pc-lbl">Now</div>
       <div class="pc-txt dark">${esc(p.immediateImpact || '')}</div>
-      <div class="pc-lbl">Expected Monthly Income Impact</div>
-      <div class="pc-txt" style="color:${pc2}; font-weight:700; font-size:13px">${esc(p.monthlyDisposableIncomeImpact || 'Calculated per event')}</div>
       <div class="pc-lbl">2–3yr Outlook</div>
       <div class="pc-txt">${esc(p.mediumTermImpact || '')}</div>
       <div class="adapt">${adapts}</div>
@@ -4435,7 +4432,7 @@ MACRO CONTEXT: ${ctx}
       const profPane = `<div id="pane-professions" class="pane" role="tabpanel">
     <div class="filter-bar" role="group" aria-label="Filter professions by risk">
       <span>FILTER:</span>${filterChips}
-      <button class="sort-btn" id="sortProfBtn" onclick="sortProfs(this)" aria-pressed="false">↓ SORT BY SCORE</button>
+      <button class="sort-btn" id="sortProfBtn" onclick="sortProfs(this)" aria-pressed="false">↓ SORT BY IMPACT</button>
     </div>
     ${profEmpty}${profHtml ? '<div class="pg" id="profGrid">' + profHtml + '</div>' : ''}
   </div>`;
@@ -4467,13 +4464,9 @@ MACRO CONTEXT: ${ctx}
           </div>
         </div>
         <div class="ic-score-box">
-          <div class="ic-score" style="color:${isc}">${sg2}${ind.impactScore || 0}</div>
+          <div class="ic-score" style="color:${isc};font-size:13px;font-family:'IBM Plex Mono',monospace;font-weight:800;">${esc(ind.monthlyDisposableIncomeImpact || '—')}</div>
           <div class="ic-verdict" style="color:${isc}">${esc(ind.verdict || '')}</div>
         </div>
-      </div>
-      <div style="background:var(--page); border-radius:4px; padding:8px 12px; margin: 0 12px 12px 12px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:10px; color:var(--muted); font-family:'IBM Plex Mono',monospace">MONTHLY DISPOSABLE INCOME IMPACT</span>
-        <span style="font-weight:700; color:${isc}; font-size:13px">${esc(ind.monthlyDisposableIncomeImpact || 'Impact varies')}</span>
       </div>
       <ul class="ic-body" style="padding-left:14px;margin:12px 0;list-style-type:disc">
         ${(ind.analysisBullets || [ind.analysis]).map(b => b ? `<li>${esc(b)}</li>` : '').join('')}
@@ -4487,7 +4480,6 @@ MACRO CONTEXT: ${ctx}
         ? `<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">No industry data available for this scenario.</div>`
         : '';
       const indPane = `<div id="pane-industries" class="pane" role="tabpanel">
-    <div style="margin-bottom:11px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em">IMPACT SCORE: −100 = SEVERE DISRUPTION · +100 = STRONG GROWTH</div>
     ${indEmpty}${indHtml}
   </div>`;
 
