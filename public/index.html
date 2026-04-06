@@ -2646,10 +2646,16 @@
         <div id="liveOilValue" style="font-size:11px; color:var(--muted); background:var(--bg); padding:2px 6px; border-radius:4px; border:1px solid var(--border)">Fetching WTI...</div>
     </div>
     <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:5px;">Simulate Oil Price Shock (WTI $/bbl)</label>
-    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="(function(v){var el=document.getElementById('oilDisplay');var base=window.OIL_SLIDER_BASE||75;var delta=Number(v)-base;el.innerText=v;var dl=document.getElementById('oilDeltaLabel');if(dl){dl.innerText=delta===0?'WTI ±$0/bbl':(delta>0?'WTI +$'+delta+'/bbl':'WTI −$'+Math.abs(delta)+'/bbl');dl.style.color=delta>0?'var(--red)':(delta<0?'var(--green)':'var(--muted)');}window.OIL_SLIDER_DELTA=delta;})(this.value);">
+    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="(function(v){var el=document.getElementById('oilDisplay');var base=window.OIL_SLIDER_BASE||75;var delta=Number(v)-base;el.innerText=v;var dl=document.getElementById('oilDeltaLabel');if(dl){dl.innerText=delta===0?'WTI ±$0/bbl':(delta>0?'WTI +$'+delta+'/bbl':'WTI −$'+Math.abs(delta)+'/bbl');dl.style.color=delta>0?'var(--red)':(delta<0?'var(--green)':'var(--muted)');}window.OIL_SLIDER_DELTA=delta;var btn=document.getElementById('oilScenarioBtn');var lbl=document.getElementById('oilScenarioLabel');if(btn){btn.style.display=delta!==0?'block':'none';}if(lbl){lbl.innerText='WTI $'+(base+delta)+'/bbl'+(delta>0?' (SHOCK +$'+delta+')':' (DROP −$'+Math.abs(delta)+')');};})(this.value);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
           <span id="oilDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);font-weight:700;min-width:28px;">75</span>
           <span id="oilDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em;">WTI ±$0/bbl</span>
+        </div>
+        <div id="oilScenarioBtn" style="display:none;margin-top:10px;">
+          <button onclick="runOilScenario()" style="width:100%;background:var(--gold);color:#0d0d0d;border:none;border-radius:6px;padding:9px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span>⚡ RUN SCENARIO —</span><span id="oilScenarioLabel">WTI $75</span>
+          </button>
+          <div id="oilScenarioHint" style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px;letter-spacing:0.04em;">Re-runs full analysis with this oil price applied to all cost projections</div>
         </div>
         <div class="sb-cat">⚔️ Geopolitical — Live 2026</div>
         <div class="ec" onclick="selEvent(this,'geo_hormuz')" role="button" tabindex="0"
@@ -3783,6 +3789,16 @@ MACRO CONTEXT: ${ctx}
     }
     function retryLast() {
       if (S.lastCtx) runAnalysis(S.lastTag, S.lastTitle, S.lastCtx, null);
+    }
+    function runOilScenario() {
+      const base  = window.OIL_SLIDER_BASE  || 75;
+      const delta = window.OIL_SLIDER_DELTA || 0;
+      if (delta === 0) return;
+      if (!S.lastCtx) { showToast('Select an event first, then adjust the oil price', 'warn'); return; }
+      const price    = base + delta;
+      const dir      = delta > 0 ? 'spike' : 'drop';
+      const oilInject = `[OIL SCENARIO: WTI at $${price}/bbl — $${Math.abs(delta)} ${dir} from $${base} baseline. Apply this price to ALL fuel cost, transport cost, agricultural input cost, and energy-sector projections in your analysis.] `;
+      runAnalysis(S.lastTag, S.lastTitle, oilInject + S.lastCtx, null);
     }
 
     /* ═══════════════════════════════════════════
