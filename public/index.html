@@ -2543,9 +2543,9 @@
       .card { border: 1px solid #eee !important; box-shadow: none !important; break-inside: avoid; margin-bottom: 20px !important; }
       .pane { display: block !important; opacity: 1 !important; visibility: visible !important; height: auto !important; margin-top: 20px; }
       #pane-regional, #pane-timeline, #pane-recommendations { page-break-before: always; }
-      .banner { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; padding: 40px !important; border-radius: 0 !important; }
-      .score-ring { border: 10px solid #000 !important; -webkit-print-color-adjust: exact; }
-      .kpi-row { grid-template-columns: repeat(4, 1fr) !important; gap: 10px !important; }
+      .banner { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 40px !important; border-radius: 0 !important; }
+      .score-ring { border: 10px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .kpi-row { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
       .kpi { border: 1px solid #eee !important; }
       
       /* Cover Sheet */
@@ -4047,26 +4047,22 @@ MACRO CONTEXT: ${ctx}
   </div>`;
 
       /* — KPIs — */
-      const kpi = `<div class="kpi-row" role="region" aria-label="Key performance indicators">
+      const gdpColor = (d.gdpImpact||'').includes('-') ? '#8B1D2F' : '#1A6B3C';
+      const kpi = `<div class="kpi-row" role="region" aria-label="Key performance indicators" style="grid-template-columns:1fr 2fr 1fr;">
     <div class="kpi" style="--kc:${sc}">
-      <div class="kpi-lbl">Overall Impact</div>
-      <div class="kpi-val" style="color:${sc};font-size:12px">${esc(d.overallSentiment || '—')}</div>
+      <div class="kpi-lbl">Overall Sentiment</div>
+      <div class="kpi-val" style="color:${sc};font-size:13px;line-height:1.2;">${esc(d.overallSentiment || '—')}</div>
       <div class="kpi-sub">Score ${sign(s)}${s} / 100</div>
     </div>
-    <div class="kpi" style="--kc:#8B1D2F">
-      <div class="kpi-lbl">Workers at Risk</div>
-      <div class="kpi-val" style="color:#8B1D2F">${esc(fmtNum(d.workersAtRisk) || '—')}</div>
-      <div class="kpi-sub">${esc(d.jobsLost || '—')}</div>
+    <div class="kpi" style="--kc:${gdpColor};border-left:3px solid ${gdpColor};background:rgba(0,0,0,0.03);">
+      <div class="kpi-lbl" style="letter-spacing:.18em;">GDP IMPACT FORECAST</div>
+      <div class="kpi-val" style="color:${gdpColor};font-size:28px;line-height:1.1;letter-spacing:-0.02em;">${esc(d.gdpImpact || '—')}</div>
+      <div class="kpi-sub" style="margin-top:4px;">Projected over <strong>${esc(d.timeHorizon || '—')}</strong> · BOT/NESDC baseline</div>
     </div>
-    <div class="kpi" style="--kc:#1A6B3C">
-      <div class="kpi-lbl">New Opportunities</div>
-      <div class="kpi-val" style="color:#1A6B3C;font-size:14px">${esc(d.jobsCreated || '—')}</div>
-      <div class="kpi-sub">Emerging roles</div>
-    </div>
-    <div class="kpi" style="--kc:#1B3F7A">
-      <div class="kpi-lbl">GDP Effect</div>
-      <div class="kpi-val" style="color:#1B3F7A;font-size:14px">${esc(d.gdpImpact || '—')}</div>
-      <div class="kpi-sub">Over ${esc(d.timeHorizon || '—')}</div>
+    <div class="kpi" style="--kc:#7A7060;border-right:none;">
+      <div class="kpi-lbl">Inflation Pressure</div>
+      <div class="kpi-val" style="font-size:16px;">${esc((d.costOfLiving && d.costOfLiving.overallInflationImpact) || '—')}</div>
+      <div class="kpi-sub">Food: ${esc((d.costOfLiving && d.costOfLiving.foodPriceImpact) || '—')}</div>
     </div>
   </div>`;
 
