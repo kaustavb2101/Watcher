@@ -4776,14 +4776,19 @@ MACRO CONTEXT: ${ctx}
         const globalImpact = d.impactScore || 0;
         const baselineModifier = window.OIL_SLIDER_DELTA || 0; // Support slider
 
-        let gridHtml = `<div style="display:flex;gap:8px;margin-bottom:10px;font-size:9px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap;padding:0 10px;">
-          <span style="background:rgba(180,20,20,0.45);color:#FF6B6B;padding:2px 6px;border-radius:3px">&#9632; SEVERE &lt;&#8722;55</span>
-          <span style="background:rgba(215,64,64,0.28);color:#F88;padding:2px 6px;border-radius:3px">&#9632; HIGH &#8722;30</span>
-          <span style="background:rgba(220,100,30,0.22);color:#FF9A5C;padding:2px 6px;border-radius:3px">&#9632; MOD &#8722;12</span>
-          <span style="background:rgba(204,168,91,0.16);color:#C8A83A;padding:2px 6px;border-radius:3px">&#9632; NEUTRAL</span>
-          <span style="background:rgba(46,160,67,0.25);color:#42C65D;padding:2px 6px;border-radius:3px">&#9632; GAIN &gt;+15</span>
+        // Helper: border color from score
+        const scoreBorder = s => s <= -55 ? '#E25555' : s <= -30 ? '#F5A623' : s <= -12 ? '#C8A83A' : s <= 0 ? '#6B7FD7' : '#4CAF82';
+        const scoreLabel  = s => s <= -55 ? 'SEVERE' : s <= -30 ? 'HIGH' : s <= -12 ? 'MOD' : s <= 0 ? 'WATCH' : 'GAIN';
+
+        // Legend
+        let gridHtml = `<div style="display:flex;gap:6px;margin-bottom:14px;font-size:9px;flex-wrap:wrap;">
+          <span style="border-left:3px solid #E25555;padding:2px 8px;background:var(--page);border-radius:3px;color:var(--muted)">&#9632; SEVERE</span>
+          <span style="border-left:3px solid #F5A623;padding:2px 8px;background:var(--page);border-radius:3px;color:var(--muted)">&#9632; HIGH</span>
+          <span style="border-left:3px solid #C8A83A;padding:2px 8px;background:var(--page);border-radius:3px;color:var(--muted)">&#9632; MODERATE</span>
+          <span style="border-left:3px solid #6B7FD7;padding:2px 8px;background:var(--page);border-radius:3px;color:var(--muted)">&#9632; WATCH</span>
+          <span style="border-left:3px solid #4CAF82;padding:2px 8px;background:var(--page);border-radius:3px;color:var(--muted)">&#9632; GAIN</span>
         </div>
-        <div id="regionalHeatGrid" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; width:100%; align-items:start; padding:10px; box-sizing:border-box;">`;
+        <div style="display:flex;flex-direction:column;gap:20px;">`;
 
         for (const [rName, pList] of Object.entries(REGIONS)) {
             let pData = pList.map(prov => {
@@ -4867,30 +4872,55 @@ MACRO CONTEXT: ${ctx}
             // "Subsequent rows are the provinces under the specific region sorted by vehicle population size"
             pData.sort((a, b) => b.totalVehicles - a.totalVehicles);
 
-            let avgScore = pData.length > 0 ? (pData.reduce((s, p) => s + p.score, 0) / pData.length) : 0;
-            
-            const getHeatClass = (s) => {
-              if (s <= -55) return 'background:rgba(180,20,20,0.45); color:#FF6B6B; border:1px solid rgba(215,64,64,0.7)';
-              if (s <= -30) return 'background:rgba(215,64,64,0.28); color:#F88; border:1px solid rgba(215,64,64,0.5)';
-              if (s <= -12) return 'background:rgba(220,100,30,0.22); color:#FF9A5C; border:1px solid rgba(220,100,30,0.4)';
-              if (s <= 0)   return 'background:rgba(204,168,91,0.16); color:#C8A83A; border:1px solid rgba(204,168,91,0.32)';
-              if (s <= 15)  return 'background:rgba(80,160,100,0.15); color:#7BC891; border:1px solid rgba(46,160,67,0.25)';
-              return              'background:rgba(46,160,67,0.25); color:#42C65D; border:1px solid rgba(46,160,67,0.4)';
-            };
+            const avgScore = pData.length > 0 ? (pData.reduce((s, p) => s + p.score, 0) / pData.length) : 0;
+            const regColors = { Northeast:'#6B7FD7', North:'#4CAF82', South:'#F5A623', East:'#9B59B6', Central:'#3498DB', West:'#E67E22' };
+            const regCol = regColors[rName] || '#888';
 
-            gridHtml += `<div class="region-col" style="display:flex; flex-direction:column; gap:6px;">
-                <div class="reg-head" style="${getHeatClass(avgScore)}; padding:8px; border-radius:6px; font-weight:bold; text-align:center; box-shadow:0 0 10px rgba(0,0,0,0.5);">
-                    <div style="font-size:12px; font-weight:800; letter-spacing:0.05em">${rName.toUpperCase()}</div>
-                    <div style="font-size:10px; opacity:0.8; margin-top:2px">Avg Impact: ${avgScore>0?'+':''}${avgScore.toFixed(0)}</div>
-                </div>`;
-            
+            gridHtml += `<div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <span style="font-size:11px;font-weight:800;color:${regCol};letter-spacing:.08em;text-transform:uppercase">${rName}</span>
+                <span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">Avg impact: <span style="color:${scoreBorder(avgScore)};font-weight:700">${avgScore>0?'+':''}${avgScore.toFixed(0)}</span></span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">`;
+
             for (const p of pData) {
-                gridHtml += `<div class="prov-card" onclick="drillDownProvince('${p.name}', '${rName}')" style="${getHeatClass(p.score)}; cursor:pointer; padding:6px 8px; font-size:11px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; transition: 0.2s;">
-                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65px;" title="${p.name}">${p.name}</span>
-                    <span style="font-weight:800;font-size:10px;opacity:0.9;font-family:'IBM Plex Mono',monospace;flex-shrink:0;margin-left:4px">${p.score > 0 ? '+' : ''}${p.score}</span>
+                const bc = scoreBorder(p.score);
+                const sl = scoreLabel(p.score);
+                // KB lookups for card KPIs
+                const _pp = (typeof PROVINCE_PROFILES !== 'undefined') ? (PROVINCE_PROFILES[p.name] || PROVINCE_PROFILES[p.name+' Metropolis'] || {branches:0,professions:[]}) : {branches:0,professions:[]};
+                const _pop = (_pp.professions||[]).reduce((s,pr)=>s+(pr.population||0),0);
+                const popFmt = _pop>=1e6?(_pop/1e6).toFixed(1)+'M':_pop>0?_pop.toLocaleString():'—';
+                const _dltR = (window.DLT_PROVINCE_TOTALS||{})[p.name]||(window.DLT_PROVINCE_TOTALS||{})[p.name.replace(' Metropolis','')];
+                const _veh = p.totalVehicles||(_dltR?(_dltR.total||0):0);
+                const vehFmt = _veh>=1e6?(_veh/1e6).toFixed(2)+'M':_veh>0?_veh.toLocaleString():'—';
+                const _intel = (window.PROVINCE_INTEL_KB||{})[p.name]||(window.PROVINCE_INTEL_KB||{})[p.name.replace(' Metropolis','')];
+                const incFmt = _intel&&_intel.avgIncome?'฿'+Math.round(_intel.avgIncome).toLocaleString():'—';
+                const branchBadge = _pp.branches>0?`<span style="font-size:8px;color:var(--gold);font-weight:700;white-space:nowrap">🎯 ${_pp.branches}</span>`:'';
+
+                gridHtml += `<div class="prov-card" data-prov="${p.name}" data-reg="${rName}" style="cursor:pointer;background:var(--paper);border:1px solid var(--border);border-left:3px solid ${bc};border-radius:5px;padding:10px 10px 8px;transition:0.15s;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+                    <span style="font-size:12px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${p.name}">${p.name}</span>
+                    ${branchBadge}
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:5px;">
+                    <div style="text-align:center;padding:4px 2px;background:var(--page);border-radius:4px;">
+                      <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Pop.</div>
+                      <div style="font-size:10px;font-weight:800;color:white">${popFmt}</div>
+                    </div>
+                    <div style="text-align:center;padding:4px 2px;background:var(--page);border-radius:4px;">
+                      <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Vehicles</div>
+                      <div style="font-size:10px;font-weight:800;color:white">${vehFmt}</div>
+                    </div>
+                    <div style="text-align:center;padding:4px 2px;background:var(--page);border-radius:4px;">
+                      <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Income</div>
+                      <div style="font-size:10px;font-weight:800;color:var(--gold)">${incFmt}</div>
+                    </div>
+                  </div>
+                  <div style="font-size:8px;color:${bc};font-weight:700;letter-spacing:.04em">${sl} <span style="font-family:'IBM Plex Mono',monospace;opacity:.8">${p.score>0?'+':''}${p.score}</span></div>
                 </div>`;
             }
-            gridHtml += `</div>`;
+            gridHtml += `</div></div>`;
         }
         gridHtml += `</div>`;
 
@@ -5372,8 +5402,9 @@ MACRO CONTEXT: ${ctx}
       document.getElementById('dd-overlay').classList.add('vis');
       
       try {
-        // Provide fallback context if no event has been analyzed yet
-        const _provTag   = S.lastTag   || 'MACRO · 2026';
+        // Province-specific tag ensures a separate cache key from the main analysis result
+        const _baseTag   = S.lastTag   || 'MACRO · 2026';
+        const _provTag   = `province:${name}:${_baseTag}`;
         const _provTitle = S.lastTitle || 'Thailand Macro-Labor Outlook 2026';
         const _provCtx   = S.lastCtx   || `Thailand 2026 macro context: GDP 1.6–1.7%, household debt ~90% GDP, 50%+ informal workers, US 19% tariff impact, oil near $80/bbl, structural slowdown. Province: ${name}. Region: ${region || 'Unknown'}. Branch count: ${branches}. Key sectors: ${professions.split(',').slice(0,3).join(',')||'diverse'}.`;
         const d = await fetchAnalysisAgent(_provTag, _provTitle, _provCtx, 'province', name, branches, professions);
@@ -5426,8 +5457,8 @@ MACRO CONTEXT: ${ctx}
 
             <div class="dd-ai-t">AUTOX BRANCH STRATEGY (${branches} LOCATIONS)</div>
             <div class="dd-card" style="border-left:3px solid var(--gold); background:rgba(212,171,82,0.05)">
-              <strong>NGERN CHAIYO POSTURE:</strong> ${esc(d.autoXStrategy || '')}
-              <div style="margin-top:8px; font-size:12px; opacity:0.8">💡 <b>Opportunity for ${esc(name)}:</b> ${esc(d.localOpportunity || '')}</div>
+              <strong>NGERN CHAIYO POSTURE:</strong> ${esc(d.autoXStrategy || `${branches > 50 ? 'Aggressive expansion' : branches > 20 ? 'Selective growth' : 'Defensive hold'} — monitor NPL triggers across ${branches} branches in ${name}. Prioritise refinancing existing title loan clients before new disbursements.`)}
+              <div style="margin-top:8px; font-size:12px; opacity:0.8">💡 <b>Opportunity for ${esc(name)}:</b> ${esc(d.localOpportunity || `Target ${(profile.professions||[])[0]?.name || 'informal sector'} workers with flexible repayment products tied to harvest/seasonal income cycles.`)}</div>
             </div>
           </div>
         `;
@@ -5531,9 +5562,9 @@ MACRO CONTEXT: ${ctx}
         if (event.target === el) closeSettings();
     }
 
-    // Delegated click for regional province cards (works with dynamically injected HTML)
+    // Delegated click for all province cards (reg-card = AI highlights, prov-card = heat grid)
     document.addEventListener('click', function(e) {
-      const card = e.target.closest('.reg-card');
+      const card = e.target.closest('.reg-card, .prov-card');
       if (!card) return;
       const prov = card.getAttribute('data-prov');
       const reg  = card.getAttribute('data-reg');
