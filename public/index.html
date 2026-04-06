@@ -4518,56 +4518,66 @@ MACRO CONTEXT: ${ctx}
       const regHtml = (d.regionalImpact || []).map(r => {
         const rc = scoreColor(r.impactScore || 0);
         const nameClean = r.province.replace(' Province', '');
-        const profile = PROVINCE_PROFILES[nameClean] || { branches: 0 };
-        const branchBadge = `<span style="font-size:9px; background:var(--gold-bg); color:var(--gold); padding:2px 6px; border-radius:10px; font-weight:800; border:1px solid var(--gold)44">🎯 ${profile.branches} BR</span>`;
-        
-        const crops = (r.affectedCrops || []).map(c => `<span class="ptag" style="background:${rc}11; border-color:${rc}44; color:${rc}; font-size:9px">${esc(c)}</span>`).join(' ');
-        const jobs = (r.criticalOccupations || []).map(j => `<span style="font-size:9px; color:var(--muted); background:var(--paper2); padding:1px 5px; border-radius:3px; margin-right:4px">${esc(j)}</span>`).join('');
-        
-        // Auto-generate a recommendation if missing from AI block
-        const localRec = r.recommendation || (r.impactScore < -30 ? `Defensive posture: Monitor ${nameClean} NPLs.` : `Growth: Expand ${nameClean} title loans.`);
+        const profile = PROVINCE_PROFILES[nameClean] || PROVINCE_PROFILES[nameClean + ' Metropolis'] || { branches: 0, professions: [] };
+        const branches = profile.branches || 0;
+        const reg = r.region || profile.region || '';
 
-        // Build profession populations list for the card
-        const profs = (profile.professions || []).map(p => `
-          <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:2px; border-bottom:1px solid var(--border)22; padding-bottom:1px">
-            <span>${esc(p.name)}</span>
-            <b style="color:var(--gold)">${fmtNum(p.population)}</b>
-          </div>
-        `).join('');
+        // KPI 1: Population (sum of profession populations as proxy)
+        const totalPop = (profile.professions || []).reduce((s, p) => s + (p.population || 0), 0);
+        const popFmt = totalPop >= 1e6 ? (totalPop/1e6).toFixed(1)+'M' : totalPop > 0 ? fmtNum(totalPop) : '—';
 
-        return `<div class="wc" onclick="drillDownProvince('${esc(r.province || '')}', '${esc(r.region || '')}')" style="padding:12px; border-left:3px solid ${rc}; margin-bottom:10px; cursor:pointer">
-      <div class="wc-name" style="font-size:14px; margin-bottom:4px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
-        <span>${esc(r.province || '')}</span>
-        ${branchBadge}
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-        <div class="wc-chg" style="color:${rc}; font-weight:700; font-size:16px">${sign(r.impactScore || 0)}${r.impactScore || 0}</div>
-        <div class="risk-badge ${riskClass(r.impactScore > 0 ? 'Positive' : r.impactScore < -60 ? 'Critical' : r.impactScore < -20 ? 'High' : 'Medium')}">${r.impactScore > 0 ? 'GAIN' : 'RISK'}</div>
-      </div>
-      <div class="pc-txt" style="font-size:11px; line-height:1.4; margin-bottom:8px"><strong>Recommendation:</strong> <span style="color:var(--gold)">${esc(localRec)}</span></div>
-      
-      <div style="background:var(--page); border:1px solid var(--border); border-radius:4px; padding:6px; margin:8px 0">
-        <div style="font-size:8px; font-weight:800; color:var(--muted); margin-bottom:3px; letter-spacing:0.05em">POPULATION CLUSTERS</div>
-        ${profs || '<div style="font-size:9px; color:var(--muted)">Profiles mapping...</div>'}
-      </div>
+        // KPI 2: Vehicles from DLT window global
+        const _dltT = window.DLT_PROVINCE_TOTALS || {};
+        const _core = nameClean.replace(' Metropolis','');
+        const _dltRec = _dltT[nameClean] || _dltT[_core] || Object.entries(_dltT).find(([k])=>k.replace(/\s+/g,'').toLowerCase()===_core.replace(/\s+/g,'').toLowerCase())?.[1];
+        const _dltTot = _dltRec ? (_dltRec.total || (_dltRec.motorcycle||0)+(_dltRec.sedan||0)+(_dltRec.pickup||0)) : (window.DLT_LOOKUP ? window.DLT_LOOKUP(nameClean) : 0);
+        const vehFmt = _dltTot >= 1e6 ? (_dltTot/1e6).toFixed(2)+'M' : _dltTot > 0 ? fmtNum(_dltTot) : '—';
+        const _vfmtC = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : fmtNum(n||0);
+        const vehBreak = _dltRec ? `🏍️ ${_vfmtC(_dltRec.motorcycle||0)}  🚗 ${_vfmtC(_dltRec.sedan||0)}  🛻 ${_vfmtC(_dltRec.pickup||0)}` : '';
 
-      <div class="pc-txt" style="font-size:11px; line-height:1.4; margin-bottom:8px"><strong>Risk:</strong> ${esc(r.riskFactor || '')}</div>
-      ${crops ? `<div style="margin-bottom:6px"><strong>Crops:</strong> ${crops}</div>` : ''}
+        // KPI 3: Avg income from PROVINCE_INTEL_KB
+        const _intel = (window.PROVINCE_INTEL_KB || {})[nameClean] || (window.PROVINCE_INTEL_KB || {})[_core];
+        const avgInc = _intel ? _intel.avgIncome : null;
+        const incFmt = avgInc ? '฿' + Math.round(avgInc).toLocaleString() : '—';
+
+        const regionColors = { Northeast:'#6B7FD7', North:'#4CAF82', South:'#F5A623', East:'#9B59B6', Central:'#3498DB', West:'#E67E22' };
+        const regCol = regionColors[reg] || '#888';
+
+        return `<div class="wc reg-card" data-prov="${esc(nameClean)}" data-reg="${esc(reg)}" style="cursor:pointer;border-left:3px solid ${rc};padding:14px 14px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:white;margin-bottom:4px">${esc(nameClean)}</div>
+          <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${regCol}22;color:${regCol};font-weight:700;letter-spacing:.04em">${esc(reg).toUpperCase()}</span>
+        </div>
+        <span style="font-size:9px;background:var(--gold-bg);color:var(--gold);padding:3px 8px;border-radius:10px;font-weight:800;border:1px solid var(--gold)44;white-space:nowrap">🎯 ${branches} BR</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+        <div style="text-align:center;padding:7px 4px;background:var(--page);border-radius:5px;border:1px solid var(--border)">
+          <div style="font-size:8px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Population</div>
+          <div style="font-size:13px;font-weight:800;color:white">${popFmt}</div>
+        </div>
+        <div style="text-align:center;padding:7px 4px;background:var(--page);border-radius:5px;border:1px solid var(--border)">
+          <div style="font-size:8px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Vehicles</div>
+          <div style="font-size:13px;font-weight:800;color:white">${vehFmt}</div>
+          ${vehBreak ? `<div style="font-size:7px;color:rgba(255,255,255,0.28);margin-top:2px;line-height:1.3">${vehBreak}</div>` : ''}
+        </div>
+        <div style="text-align:center;padding:7px 4px;background:var(--page);border-radius:5px;border:1px solid var(--border)">
+          <div style="font-size:8px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Avg Income</div>
+          <div style="font-size:13px;font-weight:800;color:var(--gold)">${incFmt}</div>
+          ${avgInc ? `<div style="font-size:7px;color:rgba(255,255,255,0.28);margin-top:2px">/mo</div>` : ''}
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.4;border-top:1px solid var(--border);padding-top:7px">${esc(r.riskFactor || '')} <span style="opacity:.45">· tap for full analysis</span></div>
     </div>`;
       }).join('');
       const regPane = `<div id="pane-regional" class="pane" role="tabpanel">
       <div class="card">
-        <div class="card-h" style="margin-bottom:10px;">
+        <div class="card-h" style="margin-bottom:12px">
           <span class="card-h-l">🗺️ Regional Risk Mapping</span>
+          <span style="font-size:10px;color:var(--muted)">Click any province for detailed analysis &amp; product recommendations</span>
         </div>
-        <div class="regional-grid" style="display:grid; grid-template-columns: 1fr; gap:15px; align-items:start;">
-          
-          <!-- Left Site: SVG Map -->
-          <div id="svgMap" style="background:var(--paper2); border-radius:var(--r); min-height:480px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid var(--border); overflow:hidden">
-<!-- Map replaced by Regional Grid -->
-</div>
-          
-          
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">
+          ${regHtml || '<div style="color:var(--muted);padding:30px;text-align:center;font-size:13px">Run an analysis to see regional impact data</div>'}
         </div>
       </div>
   </div>`;
@@ -5268,6 +5278,9 @@ MACRO CONTEXT: ${ctx}
       const debtRatio    = intelData ? intelData.debtToIncome.toFixed(1) + 'x' : (nsoData ? '~' : '—');
       const debtHH       = intelData ? '฿' + (intelData.debtPerHousehold/1000).toFixed(0) + 'k' : '—';
       const stressColor  = intelData ? (intelData.stressIndex > 0.75 ? '#E25555' : intelData.stressIndex > 0.55 ? '#F5A623' : '#4CAF82') : '#aaa';
+      // Professions from PROVINCE_INTEL_KB (preferred) or fallback to PROVINCE_PROFILES
+      const intelProfessions = intelData ? intelData.professions : null;
+      const avgProvIncome = (intelData && intelData.avgIncome) ? intelData.avgIncome : 15000;
       // Debt stress test calculations (assumes 5-year amortization on household debt)
       const rawDebtHH    = intelData ? intelData.debtPerHousehold : 0;
       const monthlyDS    = rawDebtHH > 0 ? Math.round(rawDebtHH / 60) : 0;
@@ -5281,9 +5294,6 @@ MACRO CONTEXT: ${ctx}
       const nplRisk      = dscRatioRaw > 0.45 ? '#E25555' : dscRatioRaw > 0.30 ? '#F5A623' : '#4CAF82';
       const nplLabel     = dscRatioRaw > 0.45 ? 'HIGH NPL RISK' : dscRatioRaw > 0.30 ? 'ELEVATED' : 'MANAGEABLE';
       const nplThreshold = dscRatioRaw > 0 ? Math.round(avgProvIncome * (1 - (monthlyDS / (avgProvIncome * 0.45)))) : 0;
-      // Professions from PROVINCE_INTEL_KB (preferred) or fallback to PROVINCE_PROFILES
-      const intelProfessions = intelData ? intelData.professions : null;
-      const avgProvIncome = (intelData && intelData.avgIncome) ? intelData.avgIncome : 15000;
         let combinedProfs = (intelProfessions || profile.professions || []).slice();
         const fallbackSectors = [
           {name:"Agricultural Laborers", mult: 0.55}, {name:"Retail Cashiers", mult: 0.65}, {name:"Construction Workers", mult: 0.72},
@@ -5518,6 +5528,15 @@ MACRO CONTEXT: ${ctx}
     function overlayClick(event, el) {
         if (event.target === el) closeSettings();
     }
+
+    // Delegated click for regional province cards (works with dynamically injected HTML)
+    document.addEventListener('click', function(e) {
+      const card = e.target.closest('.reg-card');
+      if (!card) return;
+      const prov = card.getAttribute('data-prov');
+      const reg  = card.getAttribute('data-reg');
+      if (prov) drillDownProvince(prov, reg || '');
+    });
   </script>
   <script src="/assets/js/dlt-kb-client.js"></script>
   <script src="/assets/js/gpp-kb-client.js"></script>
