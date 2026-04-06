@@ -1424,7 +1424,7 @@
     }
 
     .pc-name {
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 700;
       line-height: 1.3;
       color: var(--ink)
@@ -1432,7 +1432,7 @@
 
     .pc-count {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 9px;
+      font-size: 10px;
       color: var(--muted);
       margin-top: 1px
     }
@@ -1525,7 +1525,7 @@
     }
 
     .pc-txt {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted);
       line-height: 1.45
     }
@@ -1605,7 +1605,7 @@
     }
 
     .ic-name {
-      font-size: 13.5px;
+      font-size: 15px;
       font-weight: 700;
       color: var(--ink);
       margin-bottom: 3px
@@ -1619,7 +1619,7 @@
 
     .ic-stat {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 9px;
+      font-size: 10px;
       color: var(--muted)
     }
 
@@ -4443,7 +4443,7 @@ MACRO CONTEXT: ${ctx}
           <div class="pc-count">${esc(fmtNum(p.workerCount) || '')} · avg ฿${esc(fmtNum(p.avgWage) || '')}/mo</div>
         </div>
         <div class="pc-r">
-          <div class="pc-score" style="color:${pc2};font-size:13px;font-family:'IBM Plex Mono',monospace;">${esc(p.monthlyDisposableIncomeImpact || '—')}</div>
+          <div class="pc-score" style="color:${pc2};font-size:15px;font-family:'IBM Plex Mono',monospace;">${esc(p.monthlyDisposableIncomeImpact || '—')}</div>
           <div class="risk-badge ${riskClass(p.riskLevel || '')}">${esc(p.riskLevel || '')}</div>
         </div>
       </div>
@@ -4495,7 +4495,7 @@ MACRO CONTEXT: ${ctx}
           </div>
         </div>
         <div class="ic-score-box">
-          <div class="ic-score" style="color:${isc};font-size:13px;font-family:'IBM Plex Mono',monospace;font-weight:800;">${esc(ind.monthlyDisposableIncomeImpact || '—')}</div>
+          <div class="ic-score" style="color:${isc};font-size:15px;font-family:'IBM Plex Mono',monospace;font-weight:800;">${esc(ind.monthlyDisposableIncomeImpact || '—')}</div>
           <div class="ic-verdict" style="color:${isc}">${esc(ind.verdict || '')}</div>
         </div>
       </div>
@@ -4535,10 +4535,11 @@ MACRO CONTEXT: ${ctx}
         const _vfmtC = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : fmtNum(n||0);
         const vehBreak = _dltRec ? `🏍️ ${_vfmtC(_dltRec.motorcycle||0)}  🚗 ${_vfmtC(_dltRec.sedan||0)}  🛻 ${_vfmtC(_dltRec.pickup||0)}` : '';
 
-        // KPI 3: Avg income from PROVINCE_INTEL_KB
+        // KPI 3: Avg income — computed from professions[].avgIncome (no top-level field in KB)
         const _intel = (window.PROVINCE_INTEL_KB || {})[nameClean] || (window.PROVINCE_INTEL_KB || {})[_core];
-        const avgInc = _intel ? _intel.avgIncome : null;
-        const incFmt = avgInc ? '฿' + Math.round(avgInc).toLocaleString() : '—';
+        const _iProfs2 = _intel && _intel.professions ? _intel.professions : [];
+        const avgInc = _intel && _intel.avgIncome ? _intel.avgIncome : (_iProfs2.length > 0 ? Math.round(_iProfs2.reduce((s,p)=>s+(p.avgIncome||0),0)/_iProfs2.length) : 0);
+        const incFmt = avgInc > 0 ? '฿' + avgInc.toLocaleString() : '—';
 
         const regionColors = { Northeast:'#6B7FD7', North:'#4CAF82', South:'#F5A623', East:'#9B59B6', Central:'#3498DB', West:'#E67E22' };
         const regCol = regionColors[reg] || '#888';
@@ -4551,23 +4552,22 @@ MACRO CONTEXT: ${ctx}
         </div>
         <span style="font-size:9px;background:var(--gold-bg);color:var(--gold);padding:3px 8px;border-radius:10px;font-weight:800;border:1px solid var(--gold)44;white-space:nowrap">🎯 ${branches} BR</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
-        <div style="text-align:center;padding:7px 4px;background:var(--page);border-radius:5px;border:1px solid var(--border)">
-          <div style="font-size:8px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Population</div>
-          <div style="font-size:13px;font-weight:800;color:white">${popFmt}</div>
+      <div style="display:flex;gap:16px;margin-bottom:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div>
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Population</div>
+          <div style="font-size:13px;font-weight:800;color:var(--ink)">${popFmt}</div>
         </div>
-        <div style="text-align:center;padding:7px 4px;background:var(--page);border-radius:5px;border:1px solid var(--border)">
-          <div style="font-size:8px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Vehicles</div>
-          <div style="font-size:13px;font-weight:800;color:white">${vehFmt}</div>
-          ${vehBreak ? `<div style="font-size:7px;color:rgba(255,255,255,0.28);margin-top:2px;line-height:1.3">${vehBreak}</div>` : ''}
+        <div>
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Vehicles</div>
+          <div style="font-size:13px;font-weight:800;color:var(--ink)">${vehFmt}</div>
+          ${vehBreak ? `<div style="font-size:8px;color:var(--muted);margin-top:1px">${vehBreak}</div>` : ''}
         </div>
-        <div style="text-align:center;padding:7px 4px;background:var(--page);border-radius:5px;border:1px solid var(--border)">
-          <div style="font-size:8px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Avg Income</div>
-          <div style="font-size:13px;font-weight:800;color:var(--gold)">${incFmt}</div>
-          ${avgInc ? `<div style="font-size:7px;color:rgba(255,255,255,0.28);margin-top:2px">/mo</div>` : ''}
+        <div>
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Avg Income</div>
+          <div style="font-size:13px;font-weight:800;color:var(--gold)">${incFmt > 0 ? incFmt+'/mo' : '—'}</div>
         </div>
       </div>
-      <div style="font-size:10px;color:var(--muted);line-height:1.4;border-top:1px solid var(--border);padding-top:7px">${esc(r.riskFactor || '')} <span style="opacity:.45">· tap for full analysis</span></div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.4">${esc(r.riskFactor || '')} <span style="opacity:.45">· click for full analysis</span></div>
     </div>`;
       }).join('');
       const regPane = `<div id="pane-regional" class="pane" role="tabpanel">
@@ -4894,8 +4894,11 @@ MACRO CONTEXT: ${ctx}
                 const _dltR = (window.DLT_PROVINCE_TOTALS||{})[p.name]||(window.DLT_PROVINCE_TOTALS||{})[p.name.replace(' Metropolis','')];
                 const _veh = p.totalVehicles||(_dltR?(_dltR.total||0):0);
                 const vehFmt = _veh>=1e6?(_veh/1e6).toFixed(2)+'M':_veh>0?_veh.toLocaleString():'—';
-                const _intel = (window.PROVINCE_INTEL_KB||{})[p.name]||(window.PROVINCE_INTEL_KB||{})[p.name.replace(' Metropolis','')];
-                const incFmt = _intel&&_intel.avgIncome?'฿'+Math.round(_intel.avgIncome).toLocaleString():'—';
+                const _intel = (window.PROVINCE_INTEL_KB||{})[p.name]||(window.PROVINCE_INTEL_KB||{})[p.name.replace(' Metropolis','')]||(window.PROVINCE_INTEL_KB||{})['Bangkok'];
+                // avgIncome is computed from professions[] if no top-level field
+                const _iProfs = _intel&&_intel.professions ? _intel.professions : [];
+                const _avgInc = _intel&&_intel.avgIncome ? _intel.avgIncome : (_iProfs.length>0 ? Math.round(_iProfs.reduce((s,pr)=>s+(pr.avgIncome||0),0)/_iProfs.length) : 0);
+                const incFmt = _avgInc>0 ? '฿'+_avgInc.toLocaleString() : '—';
                 const branchBadge = _pp.branches>0?`<span style="font-size:8px;color:var(--gold);font-weight:700;white-space:nowrap">🎯 ${_pp.branches}</span>`:'';
 
                 gridHtml += `<div class="prov-card" data-prov="${p.name}" data-reg="${rName}" style="cursor:pointer;background:var(--paper);border:1px solid var(--border);border-left:3px solid ${bc};border-radius:5px;padding:10px 10px 8px;transition:0.15s;">
@@ -4903,21 +4906,21 @@ MACRO CONTEXT: ${ctx}
                     <span style="font-size:12px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${p.name}">${p.name}</span>
                     ${branchBadge}
                   </div>
-                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:5px;">
-                    <div style="text-align:center;padding:4px 2px;background:var(--page);border-radius:4px;">
-                      <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Pop.</div>
-                      <div style="font-size:10px;font-weight:800;color:white">${popFmt}</div>
+                  <div style="display:flex;gap:12px;margin-bottom:6px;padding-top:2px;border-top:1px solid var(--border);">
+                    <div>
+                      <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Population</div>
+                      <div style="font-size:12px;font-weight:800;color:var(--ink)">${popFmt}</div>
                     </div>
-                    <div style="text-align:center;padding:4px 2px;background:var(--page);border-radius:4px;">
-                      <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Vehicles</div>
-                      <div style="font-size:10px;font-weight:800;color:white">${vehFmt}</div>
+                    <div>
+                      <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Vehicles</div>
+                      <div style="font-size:12px;font-weight:800;color:var(--ink)">${vehFmt}</div>
                     </div>
-                    <div style="text-align:center;padding:4px 2px;background:var(--page);border-radius:4px;">
-                      <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Income</div>
-                      <div style="font-size:10px;font-weight:800;color:var(--gold)">${incFmt}</div>
+                    <div>
+                      <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Avg Income</div>
+                      <div style="font-size:12px;font-weight:800;color:var(--gold)">${incFmt}/mo</div>
                     </div>
                   </div>
-                  <div style="font-size:8px;color:${bc};font-weight:700;letter-spacing:.04em">${sl} <span style="font-family:'IBM Plex Mono',monospace;opacity:.8">${p.score>0?'+':''}${p.score}</span></div>
+                  <div style="font-size:9px;color:${bc};font-weight:700;letter-spacing:.04em">${sl} <span style="font-family:'IBM Plex Mono',monospace;opacity:.8">${p.score>0?'+':''}${p.score}</span></div>
                 </div>`;
             }
             gridHtml += `</div></div>`;
