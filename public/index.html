@@ -2639,6 +2639,34 @@
         </div>
         <button class="hbtn" id="compareBtn" onclick="toggleCompareMode()" title="Toggle Compare Mode"
           style="padding: 10px 12px; font-size: 14px;">⚖</button>
+        <button class="hbtn" onclick="toggleNewsEditor()" title="Add / Edit news card"
+          style="padding: 10px 12px; font-size: 14px;">✚</button>
+      </div>
+
+      <!-- News card editor panel -->
+      <div id="newsEditor" style="display:none;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);padding:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--gold2);margin-bottom:10px;">✚ ADD NEWS CARD</div>
+        <input id="ncTitle" type="text" maxlength="120" placeholder="Event title…"
+          style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(245,240,232,.9);padding:7px 9px;border-radius:4px;font-size:12px;outline:none;margin-bottom:6px;box-sizing:border-box;">
+        <input id="ncMeta" type="text" maxlength="100" placeholder="Meta line e.g. Apr 2026 · Short description…"
+          style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(245,240,232,.9);padding:7px 9px;border-radius:4px;font-size:12px;outline:none;margin-bottom:6px;box-sizing:border-box;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+          <select id="ncSeverity" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(245,240,232,.85);padding:6px 8px;border-radius:4px;font-size:11px;outline:none;">
+            <option value="crit">🔴 Critical</option>
+            <option value="hi" selected>🟠 High</option>
+            <option value="med">🟡 Medium</option>
+            <option value="lo">🟢 Low</option>
+          </select>
+          <select id="ncCategory" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(245,240,232,.85);padding:6px 8px;border-radius:4px;font-size:11px;outline:none;">
+            <option value="geo">⚔️ Geopolitical</option>
+            <option value="trade" selected>📦 Trade</option>
+            <option value="energy">⚡ Energy</option>
+            <option value="tech">🤖 Tech</option>
+            <option value="env">🌊 Environment</option>
+            <option value="policy">📋 Policy</option>
+          </select>
+        </div>
+        <button onclick="addNewsCard()" style="width:100%;background:var(--gold);color:var(--ink);border:none;padding:8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:800;letter-spacing:.1em;cursor:pointer;">ADD CARD</button>
       </div>
       <!-- Sector filter pills -->
       <div id="sectorFilterBar" style="display:flex;flex-wrap:wrap;gap:4px;padding:6px 12px 0 12px" role="toolbar" aria-label="Filter by sector">
@@ -3801,6 +3829,76 @@ MACRO CONTEXT: ${ctx}
     function retryLast() {
       if (S.lastCtx) runAnalysis(S.lastTag, S.lastTitle, S.lastCtx, null);
     }
+
+    /* ── NEWS CARD EDITOR ─────────────────────── */
+    function toggleNewsEditor() {
+      const el = document.getElementById('newsEditor');
+      const open = el.style.display === 'none';
+      el.style.display = open ? 'block' : 'none';
+      if (open) document.getElementById('ncTitle').focus();
+    }
+    function addNewsCard() {
+      const title = document.getElementById('ncTitle').value.trim();
+      const meta  = document.getElementById('ncMeta').value.trim();
+      const sev   = document.getElementById('ncSeverity').value;
+      const cat   = document.getElementById('ncCategory').value;
+      if (!title) { document.getElementById('ncTitle').style.borderColor = 'var(--red)'; return; }
+      document.getElementById('ncTitle').style.borderColor = '';
+
+      // Severity → dot class + label
+      const dotCls  = {crit:'c-crit',hi:'c-hi',med:'c-med',lo:'c-lo'}[sev] || 'c-med';
+      const sevLbl  = {crit:'CRITICAL',hi:'HIGH',med:'MEDIUM',lo:'LOW'}[sev] || 'HIGH';
+      const tagCls  = {geo:'t-geo',trade:'t-trd',energy:'t-mac',tech:'t-tec',env:'t-env',policy:'t-pol'}[cat] || 't-trd';
+      const catLabel = {geo:'⚔️ Geopolitical',trade:'📦 Trade',energy:'⚡ Energy',tech:'🤖 Tech',env:'🌊 Environment',policy:'📋 Policy'}[cat] || '';
+      const today   = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+      const tag     = 'custom_' + Date.now();
+      const titleEsc = title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+      // Build the card element
+      const card = document.createElement('div');
+      card.className = 'ec';
+      card.setAttribute('data-sev', sev);
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('onclick', `selEvent(this,'${tag}')`);
+      card.innerHTML = `
+        <div class="ec-row ${tagCls}"><span class="sdot ${dotCls}"></span>${sevLbl} · ${today}</div>
+        <div class="ec-title">${title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        ${meta ? `<div class="ec-meta">${meta.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        <div class="ec-cmp" onclick="toggleCompare(event,this,'${titleEsc}')" title="Add to compare">✓</div>
+        <button onclick="removeNewsCard(event,this)" title="Remove card"
+          style="position:absolute;top:5px;right:28px;background:none;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:2px 4px;line-height:1;" aria-label="Remove">✕</button>`;
+
+      // Find or create the "📰 Custom News" section
+      let section = document.getElementById('customNewsSection');
+      if (!section) {
+        section = document.createElement('div');
+        section.id = 'customNewsSection';
+        section.className = 'sb-section';
+        section.innerHTML = '<div class="sb-cat">📰 Custom News</div>';
+        // Insert before the custom-box textarea section
+        const customBox = document.querySelector('.custom-box');
+        customBox.parentNode.insertBefore(section, customBox);
+      }
+      section.appendChild(card);
+
+      // Store in sessionStorage so cards survive tab switches
+      const stored = JSON.parse(sessionStorage.getItem('customCards') || '[]');
+      stored.push({ tag, title, meta, sev, cat, today });
+      sessionStorage.setItem('customCards', JSON.stringify(stored));
+
+      // Reset + close editor
+      document.getElementById('ncTitle').value = '';
+      document.getElementById('ncMeta').value = '';
+      document.getElementById('newsEditor').style.display = 'none';
+      showToast('Card added', 'ok');
+    }
+    function removeNewsCard(e, btn) {
+      e.stopPropagation();
+      const card = btn.closest('.ec');
+      if (card) card.remove();
+    }
+
     function runOilScenario() {
       const base  = window.OIL_SLIDER_BASE  || 75;
       const delta = window.OIL_SLIDER_DELTA || 0;
@@ -4170,10 +4268,7 @@ MACRO CONTEXT: ${ctx}
           <span style="font-size:18px;width:22px;flex-shrink:0;text-align:center;">${v.icon||'🚗'}</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;font-weight:700;color:var(--fg);">${esc(v.type||'')}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${regCount} registered · Fuel: <span style="color:${fuelCol};font-weight:700;">${esc(v.fuelSensitivity||'')}</span></div>
-            <div style="margin-top:4px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;">
-              <div style="width:${fuelBar}%;height:100%;background:${fuelCol};border-radius:2px;"></div>
-            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px;">${regCount} registered · Fuel exposure: <span style="color:${fuelCol};font-weight:700;">${esc(v.fuelSensitivity||'')}</span></div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4;">${esc(v.outlook||'')}</div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
