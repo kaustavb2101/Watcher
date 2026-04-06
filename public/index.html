@@ -3795,10 +3795,12 @@ MACRO CONTEXT: ${ctx}
       const delta = window.OIL_SLIDER_DELTA || 0;
       if (delta === 0) return;
       if (!S.lastCtx) { showToast('Select an event first, then adjust the oil price', 'warn'); return; }
-      const price    = base + delta;
-      const dir      = delta > 0 ? 'spike' : 'drop';
+      const price     = base + delta;
+      const dir       = delta > 0 ? 'spike' : 'drop';
       const oilInject = `[OIL SCENARIO: WTI at $${price}/bbl — $${Math.abs(delta)} ${dir} from $${base} baseline. Apply this price to ALL fuel cost, transport cost, agricultural input cost, and energy-sector projections in your analysis.] `;
-      runAnalysis(S.lastTag, S.lastTitle, oilInject + S.lastCtx, null);
+      // Use a scenario-specific tag so the cache key is unique and doesn't return stale results
+      const scenarioTag = `${S.lastTag}_OIL${delta > 0 ? '+' : ''}${delta}`;
+      runAnalysis(scenarioTag, S.lastTitle, oilInject + S.lastCtx, null);
     }
 
     /* ═══════════════════════════════════════════
