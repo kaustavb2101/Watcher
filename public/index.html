@@ -378,17 +378,17 @@
       padding: 9px 10px;
       border-radius: var(--r);
       cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, .04);
+      border: 1px solid rgba(12, 15, 24, .06);
       border-left: 3px solid transparent;
       margin-bottom: 5px;
       transition: .14s;
-      background: rgba(255, 255, 255, .032);
+      background: rgba(12, 15, 24, .03);
       user-select: none;
       position: relative;
     }
 
     .ec:hover {
-      background: rgba(255, 255, 255, .055);
+      background: rgba(12, 15, 24, .06);
       border-color: rgba(184, 148, 58, .32)
     }
 
@@ -441,7 +441,7 @@
     .ec-title {
       font-size: 12px;
       font-weight: 600;
-      color: rgba(245, 240, 232, .95);
+      color: var(--ink);
       line-height: 1.35;
       margin-bottom: 1px
     }
@@ -449,7 +449,7 @@
     .ec-meta {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px;
-      color: rgba(245, 240, 232, .62);
+      color: var(--muted);
       line-height: 1.3
     }
 
@@ -478,27 +478,27 @@
     }
 
     .t-geo {
-      color: #EF9A9A
+      color: var(--red)
     }
 
     .t-trd {
-      color: #90CAF9
+      color: var(--blue)
     }
 
     .t-env {
-      color: #A5D6A7
+      color: var(--green)
     }
 
     .t-tec {
-      color: #CE93D8
+      color: #7B1FA2
     }
 
     .t-mac {
-      color: #FFCC80
+      color: var(--orange)
     }
 
     .t-pol {
-      color: #80DEEA
+      color: #00838F
     }
 
     /* compare checkbox on card */
@@ -2643,9 +2643,9 @@
         <div id="liveOilValue" style="font-size:11px; color:var(--muted); background:var(--bg); padding:2px 6px; border-radius:4px; border:1px solid var(--border)">Fetching WTI...</div>
     </div>
     <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:5px;">Simulate Oil Price Shock (WTI $/bbl)</label>
-    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="(function(v){var el=document.getElementById('oilDisplay');var base=window.OIL_SLIDER_BASE||75;var delta=Number(v)-base;el.innerText=v;var dl=document.getElementById('oilDeltaLabel');if(dl){dl.innerText=delta===0?'WTI ±$0/bbl':(delta>0?'WTI +$'+delta+'/bbl':'WTI −$'+Math.abs(delta)+'/bbl');dl.style.color=delta>0?'#EF9A9A':(delta<0?'#A5D6A7':'var(--muted)');}window.OIL_SLIDER_DELTA=delta;})(this.value);">
+    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="(function(v){var el=document.getElementById('oilDisplay');var base=window.OIL_SLIDER_BASE||75;var delta=Number(v)-base;el.innerText=v;var dl=document.getElementById('oilDeltaLabel');if(dl){dl.innerText=delta===0?'WTI ±$0/bbl':(delta>0?'WTI +$'+delta+'/bbl':'WTI −$'+Math.abs(delta)+'/bbl');dl.style.color=delta>0?'var(--red)':(delta<0?'var(--green)':'var(--muted)');}window.OIL_SLIDER_DELTA=delta;})(this.value);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-          <span id="oilDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#e2c97e;font-weight:700;min-width:28px;">75</span>
+          <span id="oilDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);font-weight:700;min-width:28px;">75</span>
           <span id="oilDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em;">WTI ±$0/bbl</span>
         </div>
         <div class="sb-cat">⚔️ Geopolitical — Live 2026</div>
