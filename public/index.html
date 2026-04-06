@@ -3825,7 +3825,7 @@ MACRO CONTEXT: ${ctx}
       } else if (agentType === 'labor') {
         return base + `GENERATE 18 professions, 10 industries, 8 wage impacts, and assess 6 vehicle types for AutoX loan portfolio NPL risk.\\n{\\n  "professions":[\\n    {"icon":"<emoji>","name":"<name>","workerCount":"<n>","avgWage":"<baht>","impactScore":<n>,"riskLevel":"Critical|High|Medium|Low|Positive","immediateImpact":"<max 8 words>","mediumTermImpact":"<max 8 words>","adaptationPaths":["<action>"],"tags":["<tag>"],"monthlyDisposableIncomeImpact":"<THB>"}\\n  ],\\n  "industries":[\\n    {"icon":"<emoji>","name":"<name>","gdpShare":"<%>","workforceSize":"<n>","impactScore":<n>,"verdict":"<3 words>","analysisBullets":["<max 10 words>"],"subOccupations":[{"name":"<role>","impact":<n>}],"keyActions":["<action>"],"monthlyDisposableIncomeImpact":"<THB>"}\\n  ],\\n  "wageImpacts":[\\n    {"icon":"<emoji>","profession":"<name>","currentWage":"<baht>","projectedChange":"<%>","outlook":"<max 10 words>"}\\n  ],\\n  "vehicleImpact":[\\n    {"type":"Motorcycle","icon":"🏍️","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<extra monthly burden in THB e.g. +฿800>","nplRateDelta":"<change e.g. +2.1%>","outlook":"<max 8 words>"},\\n    {"type":"Passenger Car","icon":"🚗","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.4%>","outlook":"<max 8 words>"},\\n    {"type":"Pickup Truck / Van","icon":"🛻","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.8%>","outlook":"<max 8 words>"},\\n    {"type":"Agricultural Tractor","icon":"🚜","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +2.4%>","outlook":"<max 8 words>"},\\n    {"type":"Commercial Bus & Van","icon":"🚐","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.2%>","outlook":"<max 8 words>"},\\n    {"type":"Taxi / Ride-Hailing","icon":"🚕","nplRisk":"Critical|High|Medium|Low","fuelSensitivity":"High|Medium|Low","monthlyFinanceStress":"<THB>","nplRateDelta":"<e.g. +1.6%>","outlook":"<max 8 words>"}\\n  ]\\n}`;
       } else if (agentType === 'commodities') {
-        return base + `\${nabcCtx}\\nCreate EXACTLY 10 commodities.\\n{\\n  "agriculturalImpact":[\\n    {"icon":"<emoji>","crop":"<crop>","farmersAffected":"<number>","currentPrice":"<current price per unit in baht>","projectedPriceChange":"<+12% to +18%>","impactScore":<-100 to +100>,"analysis":"<max 15 words>","costOfLivingEffect":"<max 10 words>"}\\n  ]\\n}`;
+        return base + `\${nabcCtx}\\nCreate EXACTLY 10 commodities.\\n{\\n  "agriculturalImpact":[\\n    {"icon":"<emoji>","crop":"<crop>","farmersAffected":"<number>","currentPrice":"<current price per unit in baht>","projectedPriceChange":"<+12% to +18%>","impactScore":<-100 to +100>,"analysis":"<max 15 words>","costOfLivingEffect":"<max 10 words>","topProvinces":["<top 3-5 Thai provinces by production volume for this crop>"]}\\n  ]\\n}`;
       } else if (agentType === 'strategy') {
         const productCatalog = "[Motorcycle Title Loan, Car Title Loan, Truck Title Loan, Agri-Vehicle Loan, Land Title Loan, Personal Loan, Nanofinance, PA Insurance]";
         return base + `Include EXACTLY 5 actionable recommendations, EXACTLY 10 impacted provinces, and EXACTLY 3 timeline phases. 
@@ -3976,24 +3976,53 @@ MACRO CONTEXT: ${ctx}
           <div style="font-size:14px; padding:10px;">${pricesHtml}</div>
         </div>`;
       }
+      // OAE-sourced top growing provinces per crop (authoritative — stable year-to-year)
+      const CROP_PROVINCES = {
+        'rice':      ['Nakhon Sawan','Suphanburi','Roi Et','Ubon Ratchathani','Chiang Rai'],
+        'rubber':    ['Songkhla','Surat Thani','Narathiwat','Yala','Trang'],
+        'cassava':   ['Nakhon Ratchasima','Chaiyaphum','Sa Kaeo','Kanchanaburi','Rayong'],
+        'tapioca':   ['Nakhon Ratchasima','Chaiyaphum','Sa Kaeo','Kanchanaburi','Rayong'],
+        'sugarcane': ['Nakhon Sawan','Kanchanaburi','Suphanburi','Chaiyaphum','Uttaradit'],
+        'oil palm':  ['Surat Thani','Krabi','Chumphon','Nakhon Si Thammarat','Songkhla'],
+        'palm':      ['Surat Thani','Krabi','Chumphon','Nakhon Si Thammarat','Songkhla'],
+        'maize':     ['Nakhon Ratchasima','Tak','Chaiyaphum','Phetchabun','Loei'],
+        'corn':      ['Nakhon Ratchasima','Tak','Chaiyaphum','Phetchabun','Loei'],
+        'durian':    ['Chanthaburi','Rayong','Trat','Chumphon','Nakhon Si Thammarat'],
+        'shrimp':    ['Samut Sakhon','Surat Thani','Songkhla','Chonburi','Nakhon Si Thammarat'],
+        'tuna':      ['Samut Prakan','Songkhla','Rayong','Chonburi','Phuket'],
+      };
+      function getCropProvinces(cropName, aiProvinces) {
+        const key = (cropName || '').toLowerCase();
+        for (const [k, v] of Object.entries(CROP_PROVINCES)) {
+          if (key.includes(k)) return v;
+        }
+        return (aiProvinces && aiProvinces.length) ? aiProvinces : null;
+      }
+
       const agHtml = (d.agriculturalImpact || []).map(a => {
         const isNeg = (a.impactScore || 0) < 0;
         const color = isNeg ? '#8B1D2F' : '#1A6B3C';
+        const provinces = getCropProvinces(a.crop, a.topProvinces);
+        const provHtml = provinces
+          ? provinces.slice(0, 5).map(p =>
+              `<span style="font-size:10px;background:${color}18;color:${color};border:1px solid ${color}44;border-radius:3px;padding:1px 6px;font-weight:600;">${esc(p)}</span>`
+            ).join('')
+          : '';
         return `<div class="pc" style="--pcc:${color}">
           <div class="pc-top">
             <div class="pc-l">
               <div class="pc-ic" aria-hidden="true">${a.icon || '🌾'}</div>
               <div class="pc-name">${esc(a.crop || '')}</div>
-              <div class="pc-count">${esc(fmtNum(a.farmersAffected) || '')}</div>
+              <div class="pc-count">${esc(fmtNum(a.farmersAffected) || '')} farmers</div>
             </div>
             <div class="pc-r">
-              <div class="pc-score" style="color:${color}">${sign(a.impactScore || 0)}${a.impactScore || 0}</div>
+              <div style="font-size:13px;font-weight:800;color:var(--gold);font-family:'IBM Plex Mono',monospace;text-align:right;">${esc(a.projectedPriceChange || '—')}</div>
+              <div style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;margin-top:1px;">PROJ. CHANGE</div>
             </div>
           </div>
-          <div class="pc-lbl">Current Market Price</div>
+          ${provHtml ? `<div class="pc-lbl">Main Growing Provinces</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${provHtml}</div>` : ''}
+          <div class="pc-lbl">Current Price</div>
           <div class="pc-txt">${esc(a.currentPrice || '')}</div>
-          <div class="pc-lbl">Projected Market Price Change</div>
-          <div class="pc-txt" style="color:${color}; font-weight:bold;">${esc(a.projectedPriceChange || '')}</div>
           <div class="pc-lbl">Impact Analysis</div>
           <div class="pc-txt">${esc(a.analysis || '')}</div>
         </div>`;
