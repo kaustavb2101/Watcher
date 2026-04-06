@@ -2681,21 +2681,52 @@
 
       <div class="light-theme" style="background:var(--paper); padding:15px; margin: 15px 12px 0 12px; border-radius:var(--r); border:1px solid var(--border);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h4 style="color:var(--gold); margin:0; font-size: 13px">📈 Dynamic Macro Shocks</h4>
+        <h4 style="color:var(--gold); margin:0; font-size: 13px">⚡ Perfect Storm Simulator</h4>
         <div id="liveOilValue" style="font-size:11px; color:var(--muted); background:var(--bg); padding:2px 6px; border-radius:4px; border:1px solid var(--border)">Fetching WTI...</div>
     </div>
-    <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:5px;">Simulate Oil Price Shock (WTI $/bbl)</label>
-    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="(function(v){var el=document.getElementById('oilDisplay');var base=window.OIL_SLIDER_BASE||75;var delta=Number(v)-base;el.innerText=v;var dl=document.getElementById('oilDeltaLabel');if(dl){dl.innerText=delta===0?'WTI ±$0/bbl':(delta>0?'WTI +$'+delta+'/bbl':'WTI −$'+Math.abs(delta)+'/bbl');dl.style.color=delta>0?'var(--red)':(delta<0?'var(--green)':'var(--muted)');}window.OIL_SLIDER_DELTA=delta;var btn=document.getElementById('oilScenarioBtn');var lbl=document.getElementById('oilScenarioLabel');if(btn){btn.style.display=delta!==0?'block':'none';}if(lbl){lbl.innerText='WTI $'+(base+delta)+'/bbl'+(delta>0?' (SHOCK +$'+delta+')':' (DROP −$'+Math.abs(delta)+')');};})(this.value);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-          <span id="oilDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);font-weight:700;min-width:28px;">75</span>
-          <span id="oilDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em;">WTI ±$0/bbl</span>
-        </div>
-        <div id="oilScenarioBtn" style="display:none;margin-top:10px;">
-          <button onclick="runOilScenario()" style="width:100%;background:var(--gold);color:#0d0d0d;border:none;border-radius:6px;padding:9px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <span>⚡ RUN SCENARIO —</span><span id="oilScenarioLabel">WTI $75</span>
-          </button>
-          <div id="oilScenarioHint" style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px;letter-spacing:0.04em;">Re-runs full analysis with this oil price applied to all cost projections</div>
-        </div>
+    <div style="font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:.04em;line-height:1.4">Combine multiple shocks for compounded stress-test analysis.</div>
+
+    <!-- OIL SLIDER -->
+    <label style="font-size:10px; color:var(--muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.06em;">🛢️ WTI Oil Price ($/bbl)</label>
+    <input type="range" id="oilSlider" min="50" max="150" value="75" step="1" style="width:100%; accent-color:var(--gold);" oninput="updateSliders()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px;margin-bottom:10px;">
+      <span id="oilDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);font-weight:700;">75</span>
+      <span id="oilDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">±$0</span>
+    </div>
+
+    <!-- TARIFF SLIDER -->
+    <label style="font-size:10px; color:var(--muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.06em;">🇺🇸 US Tariff Rate on Thai Goods (%)</label>
+    <input type="range" id="tariffSlider" min="0" max="60" value="19" step="1" style="width:100%; accent-color:#E25555;" oninput="updateSliders()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px;margin-bottom:10px;">
+      <span id="tariffDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#E25555;font-weight:700;">19%</span>
+      <span id="tariffDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Baseline 19%</span>
+    </div>
+
+    <!-- MIN WAGE SLIDER -->
+    <label style="font-size:10px; color:var(--muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.06em;">💰 Min Wage Hike (฿/day)</label>
+    <input type="range" id="wageSlider" min="363" max="700" value="363" step="1" style="width:100%; accent-color:#4CAF82;" oninput="updateSliders()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px;margin-bottom:10px;">
+      <span id="wageDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4CAF82;font-weight:700;">฿363</span>
+      <span id="wageDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Current floor</span>
+    </div>
+
+    <!-- THB/USD SLIDER -->
+    <label style="font-size:10px; color:var(--muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.06em;">💱 THB/USD Exchange Rate</label>
+    <input type="range" id="fxSlider" min="28" max="42" value="34" step="0.5" style="width:100%; accent-color:#6B7FD7;" oninput="updateSliders()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px;margin-bottom:10px;">
+      <span id="fxDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6B7FD7;font-weight:700;">฿34.0</span>
+      <span id="fxDeltaLabel" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">±0.0 from baseline</span>
+    </div>
+
+    <!-- SCENARIO SUMMARY + RUN BUTTON -->
+    <div id="scenarioSummary" style="display:none;margin-top:4px;">
+      <div id="scenarioChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
+      <button onclick="runPerfectStormScenario()" style="width:100%;background:var(--gold);color:#0d0d0d;border:none;border-radius:6px;padding:10px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;">
+        ⚡ RUN PERFECT STORM ANALYSIS
+      </button>
+      <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px;">AI synthesises compounded impact across all active shocks</div>
+    </div>
+        <div id="oilScenarioBtn" style="display:none"></div>
         <!-- AI-GENERATED LIVE EVENTS — injected by loadLiveEvents() -->
         <div id="liveEventsSection" style="display:none;">
           <div class="sb-cat" style="display:flex;align-items:center;justify-content:space-between;">
@@ -3828,9 +3859,9 @@ MACRO CONTEXT: ${ctx}
         return base + `\${nabcCtx}\\nCreate EXACTLY 10 commodities.\\n{\\n  "agriculturalImpact":[\\n    {"icon":"<emoji>","crop":"<crop>","farmersAffected":"<number>","currentPrice":"<current price per unit in baht>","projectedPriceChange":"<+12% to +18%>","impactScore":<-100 to +100>,"analysis":"<max 15 words>","costOfLivingEffect":"<max 10 words>","topProvinces":["<top 3-5 Thai provinces by production volume for this crop>"]}\\n  ]\\n}`;
       } else if (agentType === 'strategy') {
         const productCatalog = "[Motorcycle Title Loan, Car Title Loan, Truck Title Loan, Agri-Vehicle Loan, Land Title Loan, Personal Loan, Nanofinance, PA Insurance]";
-        return base + `Include EXACTLY 5 actionable recommendations, EXACTLY 10 impacted provinces, and EXACTLY 3 timeline phases. 
+        return base + `Include EXACTLY 5 actionable recommendations, EXACTLY 10 impacted provinces, and EXACTLY 3 timeline phases.
         MANDATORY: Map at least 3 risks/opportunities to these AutoX Products: ${productCatalog}.
-        {\\n  "recommendations":[\\n    {"icon":"<emoji>","title":"<title>","description":"<2 sentences specific action>","linkedProduct":"<AutoX Product Name>"}\\n  ],\\n  "timeline":[\\n    {"phase":"Immediate (0–3 months)","icon":"<emoji>","colorHex":"<hex>","title":"<title>","description":"<specific>"},\\n    {"phase":"Short-term (3–12 months)","icon":"<emoji>","colorHex":"<hex>","title":"<title>","description":"<specific>"},\\n    {"phase":"Medium-term (1–3 years)","icon":"<emoji>","colorHex":"<hex>","title":"<title>","description":"<specific>"}\\n  ],\\n  "strategyInsight":{\\n    "autoXThreats":["<Bullet>"],\\n    "strategicOpportunities":["<Action>"],\\n    "productAlignment":[{"product":"<ProductName>","strategy":"<1 sentence reason>"}]\\n  },\\n  "regionalImpact":[\\n    {"province":"<province>","region":"<Central|North|Northeast|South|East|West>","impactScore":<-100 to +100>,"riskFactor":"<5-word>","affectedCrops":["<emoji> <crop>"],"criticalOccupations":["<job>"]}\\n  ]\\n}`;
+        {\\n  "recommendations":[\\n    {"icon":"<emoji>","title":"<title>","description":"<2 sentences specific action>","linkedProduct":"<AutoX Product Name>"}\\n  ],\\n  "timeline":[\\n    {"phase":"Immediate (0–3 months)","icon":"<emoji>","colorHex":"<hex>","title":"<title>","description":"<specific>"},\\n    {"phase":"Short-term (3–12 months)","icon":"<emoji>","colorHex":"<hex>","title":"<title>","description":"<specific>"},\\n    {"phase":"Medium-term (1–3 years)","icon":"<emoji>","colorHex":"<hex>","title":"<title>","description":"<specific>"}\\n  ],\\n  "nplTrajectory":[\\n    {"month":1,"nplDelta":<+0.0 to +5.0, change in NPL rate %>,"gdpDelta":<-5.0 to +2.0 %>,"incomeImpact":<-30 to +10 %>},\\n    {"month":3,"nplDelta":<n>,"gdpDelta":<n>,"incomeImpact":<n>},\\n    {"month":6,"nplDelta":<n>,"gdpDelta":<n>,"incomeImpact":<n>},\\n    {"month":9,"nplDelta":<n>,"gdpDelta":<n>,"incomeImpact":<n>},\\n    {"month":12,"nplDelta":<n>,"gdpDelta":<n>,"incomeImpact":<n>},\\n    {"month":18,"nplDelta":<n>,"gdpDelta":<n>,"incomeImpact":<n>}\\n  ],\\n  "strategyInsight":{\\n    "autoXThreats":["<Bullet>"],\\n    "strategicOpportunities":["<Action>"],\\n    "productAlignment":[{"product":"<ProductName>","strategy":"<1 sentence reason>"}]\\n  },\\n  "regionalImpact":[\\n    {"province":"<province>","region":"<Central|North|Northeast|South|East|West>","impactScore":<-100 to +100>,"riskFactor":"<5-word>","affectedCrops":["<emoji> <crop>"],"criticalOccupations":["<job>"]}\\n  ]\\n}`;
       } else if (agentType === 'province') {
         const provinceName = args[0]; 
         const branchCount = args[1] || 0;
@@ -3920,18 +3951,101 @@ MACRO CONTEXT: ${ctx}
       if (card) card.remove();
     }
 
-    function runOilScenario() {
-      const base  = window.OIL_SLIDER_BASE  || 75;
-      const delta = window.OIL_SLIDER_DELTA || 0;
-      if (delta === 0) return;
-      if (!S.lastCtx) { showToast('Select an event first, then adjust the oil price', 'warn'); return; }
-      const price     = base + delta;
-      const dir       = delta > 0 ? 'spike' : 'drop';
-      const oilInject = `[OIL SCENARIO: WTI at $${price}/bbl — $${Math.abs(delta)} ${dir} from $${base} baseline. Apply this price to ALL fuel cost, transport cost, agricultural input cost, and energy-sector projections in your analysis.] `;
-      // Use a scenario-specific tag so the cache key is unique and doesn't return stale results
-      const scenarioTag = `${S.lastTag}_OIL${delta > 0 ? '+' : ''}${delta}`;
-      runAnalysis(scenarioTag, S.lastTitle, oilInject + S.lastCtx, null);
+    // Slider state globals
+    window.OIL_SLIDER_BASE  = 75;
+    window.OIL_SLIDER_DELTA = 0;
+    window.TARIFF_RATE      = 19;   // current baseline
+    window.TARIFF_BASELINE  = 19;
+    window.WAGE_RATE        = 363;
+    window.WAGE_BASELINE    = 363;
+    window.FX_RATE          = 34.0;
+    window.FX_BASELINE      = 34.0;
+
+    function updateSliders() {
+      const oilBase = window.OIL_SLIDER_BASE || 75;
+      const oilVal  = parseFloat(document.getElementById('oilSlider').value);
+      const oilDelta = oilVal - oilBase;
+      window.OIL_SLIDER_DELTA = oilDelta;
+      document.getElementById('oilDisplay').textContent = oilVal;
+      document.getElementById('oilDeltaLabel').textContent = oilDelta === 0 ? '±$0' : (oilDelta > 0 ? '+$' : '−$') + Math.abs(oilDelta);
+      document.getElementById('oilDeltaLabel').style.color = oilDelta > 0 ? 'var(--red)' : oilDelta < 0 ? 'var(--green)' : 'var(--muted)';
+
+      const tariffVal = parseInt(document.getElementById('tariffSlider').value);
+      window.TARIFF_RATE = tariffVal;
+      const tariffDelta = tariffVal - window.TARIFF_BASELINE;
+      document.getElementById('tariffDisplay').textContent = tariffVal + '%';
+      document.getElementById('tariffDeltaLabel').textContent = tariffDelta === 0 ? 'Baseline 19%' : (tariffDelta > 0 ? 'Escalation +' : 'Reduction ') + Math.abs(tariffDelta) + '%';
+      document.getElementById('tariffDeltaLabel').style.color = tariffDelta > 0 ? 'var(--red)' : tariffDelta < 0 ? 'var(--green)' : 'var(--muted)';
+
+      const wageVal = parseInt(document.getElementById('wageSlider').value);
+      window.WAGE_RATE = wageVal;
+      const wageDelta = wageVal - window.WAGE_BASELINE;
+      document.getElementById('wageDisplay').textContent = '฿' + wageVal;
+      document.getElementById('wageDeltaLabel').textContent = wageDelta === 0 ? 'Current floor' : '+฿' + wageDelta + '/day hike';
+      document.getElementById('wageDeltaLabel').style.color = wageDelta > 0 ? '#4CAF82' : 'var(--muted)';
+
+      const fxVal = parseFloat(document.getElementById('fxSlider').value);
+      window.FX_RATE = fxVal;
+      const fxDelta = (fxVal - window.FX_BASELINE).toFixed(1);
+      document.getElementById('fxDisplay').textContent = '฿' + fxVal.toFixed(1);
+      document.getElementById('fxDeltaLabel').textContent = fxDelta == 0 ? '±0.0 from baseline' : (fxDelta > 0 ? 'Weaker +฿' : 'Stronger ฿') + Math.abs(fxDelta);
+      document.getElementById('fxDeltaLabel').style.color = fxDelta > 0 ? 'var(--red)' : fxDelta < 0 ? 'var(--green)' : 'var(--muted)';
+
+      // Show/hide scenario panel and build chips
+      const shocks = [];
+      if (oilDelta !== 0) shocks.push({ label: 'WTI $' + oilVal + '/bbl', color: oilDelta > 0 ? '#E25555' : '#4CAF82' });
+      if (tariffDelta !== 0) shocks.push({ label: 'Tariff ' + tariffVal + '%', color: tariffDelta > 0 ? '#E25555' : '#4CAF82' });
+      if (wageDelta !== 0) shocks.push({ label: 'MinWage ฿' + wageVal, color: '#4CAF82' });
+      if (parseFloat(fxDelta) !== 0) shocks.push({ label: 'THB/USD ' + fxVal.toFixed(1), color: fxDelta > 0 ? '#E25555' : '#4CAF82' });
+
+      const summary = document.getElementById('scenarioSummary');
+      const chips = document.getElementById('scenarioChips');
+      if (shocks.length > 0) {
+        summary.style.display = 'block';
+        chips.innerHTML = shocks.map(s => `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;font-family:'IBM Plex Mono',monospace;font-weight:700;">${s.label}</span>`).join('');
+      } else {
+        summary.style.display = 'none';
+      }
     }
+
+    function runPerfectStormScenario() {
+      if (!S.lastCtx) { showToast('Select an event first, then adjust the sliders', 'warn'); return; }
+      const oilBase  = window.OIL_SLIDER_BASE || 75;
+      const oilDelta = window.OIL_SLIDER_DELTA || 0;
+      const tariff   = window.TARIFF_RATE || 19;
+      const tariffDelta = tariff - (window.TARIFF_BASELINE || 19);
+      const wage     = window.WAGE_RATE || 363;
+      const wageDelta = wage - (window.WAGE_BASELINE || 363);
+      const fx       = window.FX_RATE || 34;
+      const fxDelta  = +(fx - (window.FX_BASELINE || 34)).toFixed(1);
+
+      const parts = [];
+      const tagParts = [];
+      if (oilDelta !== 0) {
+        parts.push(`WTI oil at $${oilBase + oilDelta}/bbl (${oilDelta > 0 ? 'SHOCK +$' : 'DROP −$'}${Math.abs(oilDelta)} from $${oilBase} baseline) — apply to ALL fuel, transport, and agri-input cost projections`);
+        tagParts.push(`OIL${oilDelta > 0 ? '+' : ''}${oilDelta}`);
+      }
+      if (tariffDelta !== 0) {
+        parts.push(`US tariff on Thai goods at ${tariff}% (${tariffDelta > 0 ? 'escalated +' : 'reduced '}${Math.abs(tariffDelta)}% from 19% baseline) — apply to export sector, manufacturing employment, and GDP forecasts`);
+        tagParts.push(`TARIFF${tariff}pct`);
+      }
+      if (wageDelta !== 0) {
+        parts.push(`Thai minimum wage at ฿${wage}/day (+฿${wageDelta} hike) — apply to SME operating costs, retail margins, and agricultural labour cost projections`);
+        tagParts.push(`WAGE${wage}`);
+      }
+      if (fxDelta !== 0) {
+        parts.push(`THB/USD exchange rate at ฿${fx} (${fxDelta > 0 ? 'baht weakened by ฿' + fxDelta : 'baht strengthened by ฿' + Math.abs(fxDelta)}) — apply to import costs, USD-denominated debt, and tourism revenue projections`);
+        tagParts.push(`FX${fx}`);
+      }
+      if (parts.length === 0) return;
+
+      const inject = `[PERFECT STORM SCENARIO — ${parts.length} simultaneous macro shocks: ${parts.join('; ')}. Analyse the COMPOUNDED AND CASCADING effects of ALL these shocks acting simultaneously. Do not analyse them in isolation — synthesise their interaction effects, feedback loops, and which sectors face multiplied exposure.] `;
+      const scenarioTag = `${S.lastTag}_STORM_${tagParts.join('_')}`;
+      runAnalysis(scenarioTag, S.lastTitle + ' [Perfect Storm]', inject + S.lastCtx, null);
+    }
+
+    // Legacy alias kept for any cached onclick references
+    function runOilScenario() { runPerfectStormScenario(); }
 
     /* ═══════════════════════════════════════════
        RENDER RESULTS
@@ -4607,7 +4721,23 @@ MACRO CONTEXT: ${ctx}
       const tlEmpty = (!d.timeline || d.timeline.length === 0)
         ? `<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">Timeline data unavailable.</div>`
         : '';
+      // ECharts NPL trajectory chart data
+      const traj = d.nplTrajectory || [];
+      const trajMonths  = traj.map(t => 'M' + t.month);
+      const trajNpl     = traj.map(t => +(t.nplDelta||0).toFixed(2));
+      const trajGdp     = traj.map(t => +(t.gdpDelta||0).toFixed(2));
+      const trajIncome  = traj.map(t => +(t.incomeImpact||0).toFixed(2));
+      const trajJson    = JSON.stringify({ months: trajMonths, npl: trajNpl, gdp: trajGdp, income: trajIncome });
+
       const tlPane = `<div id="pane-timeline" class="pane" role="tabpanel">
+    ${traj.length > 0 ? `
+    <div class="card" style="margin-bottom:15px">
+      <div class="card-h" style="margin-bottom:12px">
+        <span class="card-h-l">📈 18-Month Risk Trajectory</span>
+        <span style="font-size:10px;color:var(--muted)">NPL delta · GDP delta · Household income impact (%)</span>
+      </div>
+      <div id="trajChart" style="width:100%;height:260px"></div>
+    </div>` : ''}
     <div class="g2">
       <div class="card">
         <div class="card-h"><span class="card-h-l">📅 Impact Timeline</span></div>
@@ -4623,6 +4753,31 @@ MACRO CONTEXT: ${ctx}
         </div>
       </div>
     </div>
+    <script>
+    (function(){
+      var tData = ${trajJson};
+      if (!tData.months || !tData.months.length) return;
+      loadECharts().then(function(){
+        var el = document.getElementById('trajChart');
+        if (!el) return;
+        var chart = echarts.init(el, null, { renderer: 'canvas' });
+        chart.setOption({
+          backgroundColor: 'transparent',
+          grid: { left: 40, right: 20, top: 20, bottom: 30 },
+          tooltip: { trigger: 'axis', backgroundColor: '#1a1d2e', borderColor: '#333', textStyle: { color: '#e8e0d0', fontSize: 11 } },
+          legend: { data: ['NPL Δ%','GDP Δ%','Income Δ%'], bottom: 0, textStyle: { color: '#8A96A3', fontSize: 10 } },
+          xAxis: { type: 'category', data: tData.months, axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#8A96A3', fontSize: 10 } },
+          yAxis: { type: 'value', axisLabel: { color: '#8A96A3', fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: '#222' } } },
+          series: [
+            { name: 'NPL Δ%', type: 'line', smooth: true, data: tData.npl, lineStyle: { color: '#E25555', width: 2.5 }, itemStyle: { color: '#E25555' }, areaStyle: { color: 'rgba(226,85,85,0.08)' }, symbol: 'circle', symbolSize: 6 },
+            { name: 'GDP Δ%', type: 'line', smooth: true, data: tData.gdp, lineStyle: { color: '#6B7FD7', width: 2, type: 'dashed' }, itemStyle: { color: '#6B7FD7' }, symbol: 'circle', symbolSize: 5 },
+            { name: 'Income Δ%', type: 'line', smooth: true, data: tData.income, lineStyle: { color: '#B8943A', width: 2, type: 'dotted' }, itemStyle: { color: '#B8943A' }, symbol: 'diamond', symbolSize: 6 }
+          ]
+        });
+        window.addEventListener('resize', function(){ chart.resize(); });
+      });
+    })();
+    <\/script>
   </div>`;
 
       /* — RECOMMENDATIONS PANE — */
@@ -4664,7 +4819,8 @@ MACRO CONTEXT: ${ctx}
 
       /* — ASSEMBLE — */
       const resEl = document.getElementById('results');
-      const instBtn = `<button class="bbn" style="background:var(--gold); color:var(--ink); font-weight:800; border:none" onclick="generateExecutiveReport()" aria-label="Institutional Report">🏛️ INSTITUTIONAL REPORT</button>`;
+      const instBtn = `<button class="bbn" style="background:var(--gold); color:var(--ink); font-weight:800; border:none" onclick="generateExecutiveReport()" aria-label="Institutional Report">🏛️ INSTITUTIONAL REPORT</button>
+<button class="bbn" style="background:transparent; color:var(--gold); font-weight:800; border:1px solid var(--gold)44; margin-left:6px" onclick="exportPDF()" aria-label="Export PDF">📄 EXPORT PDF</button>`;
 
       const combinedBanner = banner.replace('class="b-btns">', `class="b-btns">${instBtn}`);
 
@@ -5124,6 +5280,97 @@ MACRO CONTEXT: ${ctx}
         });
       }, 500);
     }
+    async function exportPDF() {
+      const d = S.lastResult;
+      if (!d) { showToast('Run an analysis first', 'warn'); return; }
+      showToast('Building PDF report…', 'ok');
+
+      // Build a clean light-mode report div
+      const title  = S.lastTitle || 'Thailand Macro Analysis';
+      const score  = d.impactScore || 0;
+      const sc     = SENTIMENT_COLORS[d.overallSentiment] || '#B8943A';
+      const date   = new Date().toLocaleDateString('en-TH', { year:'numeric', month:'long', day:'numeric' });
+      const docId  = 'AX-' + Date.now().toString(36).toUpperCase();
+
+      const recs   = (d.recommendations || []).map(r =>
+        `<div style="margin-bottom:10px;padding:10px;border-left:3px solid #B8943A;background:#fffdf5">
+          <b style="font-size:12px">${esc(r.icon||'')} ${esc(r.title||'')}</b>
+          <div style="font-size:11px;color:#555;margin-top:4px">${esc(r.description||'')} <span style="color:#B8943A;font-weight:700">[${esc(r.linkedProduct||'')}]</span></div>
+        </div>`).join('');
+
+      const regional = (d.regionalImpact || []).slice(0,10).map(r =>
+        `<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px">${esc(r.province||'')}</td>
+         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${esc(r.region||'')}</td>
+         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;color:${r.impactScore<-30?'#c0392b':r.impactScore>0?'#27ae60':'#e67e22'}">${r.impactScore>0?'+':''}${r.impactScore||0}</td>
+         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${esc(r.riskFactor||'')}</td></tr>`).join('');
+
+      const html = `<div id="pdf-report" style="font-family:Arial,sans-serif;color:#1a1a2e;background:white;padding:40px;max-width:800px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #B8943A;padding-bottom:20px;margin-bottom:24px">
+          <div>
+            <div style="font-size:10px;letter-spacing:.15em;color:#888;text-transform:uppercase;margin-bottom:6px">AutoX Macro-Intelligence · Ngern Chaiyo Group</div>
+            <div style="font-size:22px;font-weight:800;line-height:1.2;max-width:520px">${esc(title)}</div>
+            <div style="font-size:13px;color:#B8943A;margin-top:8px">${esc(d.headline||'')}</div>
+          </div>
+          <div style="text-align:center;border:3px solid ${sc};border-radius:50%;width:72px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <div style="font-size:22px;font-weight:900;color:${sc}">${score>0?'+':''}${score}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:8px">
+          <div style="font-size:9px;color:#888">DOC: ${docId}</div>
+          <div style="font-size:9px;color:#888">GENERATED: ${date}</div>
+          <div style="font-size:9px;color:#888">CLASSIFICATION: INTERNAL STRATEGY</div>
+        </div>
+        <div style="background:#fff8ee;border:1px solid #e8d5a3;border-radius:6px;padding:16px;margin-bottom:24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:8px">SITUATION ANALYSIS</div>
+          <div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${esc(d.analysis||'').replace(/\\n/g,'\n')}</div>
+        </div>
+        <div style="margin-bottom:24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:12px">EXECUTIVE RECOMMENDATIONS</div>
+          ${recs || '<p style="color:#888;font-size:12px">No recommendations available.</p>'}
+        </div>
+        ${regional ? `<div style="margin-bottom:24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:10px">REGIONAL IMPACT ASSESSMENT</div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:#f5f0e8">
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">PROVINCE</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">REGION</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">SCORE</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">KEY RISK</th>
+            </tr></thead>
+            <tbody>${regional}</tbody>
+          </table>
+        </div>` : ''}
+        <div style="border-top:1px solid #eee;padding-top:12px;font-size:9px;color:#aaa;display:flex;justify-content:space-between">
+          <span>AutoX (Ngern Chaiyo) · Confidential — Internal Use Only</span>
+          <span>thailand-labor-intel.vercel.app</span>
+        </div>
+      </div>`;
+
+      // Inject into hidden container, print, then remove
+      let container = document.getElementById('pdf-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'pdf-container';
+        container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;background:white;z-index:-1';
+        document.body.appendChild(container);
+      }
+      container.innerHTML = html;
+
+      // Use browser print with print-specific CSS targeting only #pdf-report
+      const style = document.createElement('style');
+      style.id = 'pdf-print-style';
+      style.textContent = `@media print { body > *:not(#pdf-container) { display:none !important; } #pdf-container { position:static !important; top:auto !important; left:auto !important; width:100% !important; z-index:auto !important; } }`;
+      document.head.appendChild(style);
+
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+          style.remove();
+          container.innerHTML = '';
+        }, 2000);
+      }, 300);
+    }
+
     function showError(err) {
       document.getElementById('errorMsg').textContent = err.message || 'An unexpected error occurred.';
       const detail = document.getElementById('errorDetail');
@@ -5480,7 +5727,7 @@ MACRO CONTEXT: ${ctx}
           const el = document.getElementById('liveOilValue');
           if (el) { el.innerText = 'LIVE: $' + Math.round(p) + '/bbl'; el.style.color = 'var(--gold)'; }
           const s = document.getElementById('oilSlider');
-          if (s) { s.value = Math.round(p); document.getElementById('oilDisplay').innerText = Math.round(p); }
+          if (s) { s.value = Math.round(p); window.OIL_SLIDER_DELTA = 0; updateSliders(); }
         } catch(e) { console.warn(e); }
       }
       setTimeout(fetchLiveOil, 800);
