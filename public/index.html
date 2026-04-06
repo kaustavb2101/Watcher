@@ -2696,6 +2696,19 @@
           </button>
           <div id="oilScenarioHint" style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px;letter-spacing:0.04em;">Re-runs full analysis with this oil price applied to all cost projections</div>
         </div>
+        <!-- AI-GENERATED LIVE EVENTS — injected by loadLiveEvents() -->
+        <div id="liveEventsSection" style="display:none;">
+          <div class="sb-cat" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>🤖 AI LIVE EVENTS</span>
+            <button onclick="loadLiveEvents(true)" title="Refresh" style="background:none;border:none;color:var(--gold2);cursor:pointer;font-size:11px;padding:0;line-height:1;" aria-label="Refresh live events">↺</button>
+          </div>
+          <div id="liveEventsCards"></div>
+          <div id="liveEventsTimestamp" style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:rgba(245,240,232,.25);padding:4px 10px 8px;letter-spacing:.06em;"></div>
+        </div>
+        <div id="liveEventsLoading" style="padding:14px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(245,240,232,.35);letter-spacing:.1em;">
+          ◌ LOADING LIVE EVENTS…
+        </div>
+
         <div class="sb-cat">⚔️ Geopolitical — Live 2026</div>
         <div class="ec" onclick="selEvent(this,'geo_hormuz')" role="button" tabindex="0"
           aria-label="US-Israel Strikes on Iran, Strait of Hormuz Closure">
@@ -3345,12 +3358,20 @@
       document.querySelectorAll('.ec').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
       const ev = EVENTS[key];
-      if (!ev) return;
-      S.lastTag = ev.tag;
-      S.lastTitle = ev.title;
-      S.lastCtx = ev.ctx;
-
-      runAnalysis(ev.tag, ev.title, ev.ctx, card);
+      if (ev) {
+        S.lastTag = ev.tag;
+        S.lastTitle = ev.title;
+        S.lastCtx = ev.ctx;
+        runAnalysis(ev.tag, ev.title, ev.ctx, card);
+      } else {
+        // Live / custom card — read context from data attribute
+        const liveCtx  = card.getAttribute('data-liveCtx') || '';
+        const liveTitle = card.querySelector('.ec-title')?.textContent?.trim() || key;
+        S.lastTag   = key;
+        S.lastTitle = liveTitle;
+        S.lastCtx   = liveCtx || liveTitle;
+        runAnalysis(key, liveTitle, S.lastCtx, card);
+      }
     }
     function clickPill(key) {
       const card = [...document.querySelectorAll('.ec')].find(c => (c.getAttribute('onclick') || '').includes(`'${key}'`));
@@ -5394,6 +5415,68 @@ MACRO CONTEXT: ${ctx}
         } catch(e) { console.warn(e); }
       }
       setTimeout(fetchLiveOil, 800);
+      setTimeout(loadLiveEvents, 1200);
+
+      /* ── LIVE EVENTS LOADER ───────────────────── */
+      async function loadLiveEvents(forceRefresh) {
+        const CACHE_KEY = 'tmli_live_events_v1';
+        const CACHE_TTL = 3600 * 1000; // 1 hour
+        const section   = document.getElementById('liveEventsSection');
+        const container = document.getElementById('liveEventsCards');
+        const loading   = document.getElementById('liveEventsLoading');
+        const timestamp = document.getElementById('liveEventsTimestamp');
+
+        // Try cache first
+        if (!forceRefresh) {
+          try {
+            const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+            if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+              renderLiveEvents(cached.data, section, container, timestamp, loading, true);
+              return;
+            }
+          } catch(e) {}
+        }
+
+        if (loading) loading.style.display = 'block';
+
+        try {
+          const res  = await fetch('/api/events');
+          if (!res.ok) throw new Error('API ' + res.status);
+          const data = await res.json();
+          if (!data.events || !data.events.length) throw new Error('empty');
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+          renderLiveEvents(data, section, container, timestamp, loading, false);
+        } catch(e) {
+          console.warn('Live events failed:', e);
+          if (loading) loading.style.display = 'none';
+        }
+      }
+
+      function renderLiveEvents(data, section, container, timestamp, loading, fromCache) {
+        const dotCls  = { crit:'c-crit', hi:'c-hi', med:'c-med', lo:'c-lo' };
+        const sevLbl  = { crit:'CRITICAL', hi:'HIGH', med:'MEDIUM', lo:'LOW' };
+        const tagCls  = { geo:'t-geo', trade:'t-trd', energy:'t-mac', tech:'t-tec', env:'t-env', policy:'t-pol' };
+
+        container.innerHTML = (data.events || []).map(ev => {
+          const dc = dotCls[ev.severity]  || 'c-med';
+          const sl = sevLbl[ev.severity]  || 'WATCH';
+          const tc = tagCls[ev.category]  || 't-trd';
+          const titleEsc = (ev.title||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+          // Store context on the element so selEvent can pick it up
+          const ctxAttr  = (ev.context||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+          return `<div class="ec" data-sev="${ev.severity||'med'}" data-liveCtx="${ctxAttr}"
+              onclick="selEvent(this,'${ev.tag||'live_'+Date.now()}')" role="button" tabindex="0">
+            <div class="ec-row ${tc}"><span class="sdot ${dc}"></span>${sl} · AI LIVE</div>
+            <div class="ec-title">${(ev.title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            ${ev.meta?`<div class="ec-meta">${ev.meta.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`:''}
+            <div class="ec-cmp" onclick="toggleCompare(event,this,'${titleEsc}')" title="Add to compare">✓</div>
+          </div>`;
+        }).join('');
+
+        if (loading) loading.style.display = 'none';
+        section.style.display = 'block';
+        if (timestamp) timestamp.textContent = (fromCache ? 'CACHED · ' : 'LIVE · ') + (data.generated || new Date().toLocaleDateString());
+      }
 
       function closeDrillDown() {
       document.getElementById('dd-overlay').classList.remove('vis');
