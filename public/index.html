@@ -3738,12 +3738,17 @@
         nabcCtx += "</NABC_LIVE_PRICES>\nUse these baseline prices when projecting price cascades.";
       }
 
-      const base = `Act as the "AutoX Strategy Agent"—a high-level lending institutional analyst for AutoX (Ngern Chaiyo).
-Analyze this event: [${tag}] ${title}
-Context: ${ctx}
+      const base = `You are AutoX Strategy Intelligence — institutional credit and macro-labor analyst for AutoX (Ngern Chaiyo), Thailand's largest non-bank lender. Portfolio: 50%+ informal-sector borrowers. National context: ~90% household debt/GDP, 38M informal workers, US tariff shock, oil near $80/bbl.
 
-Return ONLY valid JSON (no markdown). IMPACT TARGET: Sub-5 second ultra-fast population.
-Use telegraphic brevity. No fluff.
+HARD CONSTRAINTS:
+• Output ONLY valid JSON. No markdown fences. No prose. No explanation outside the schema.
+• Ground every estimate in Thai macro data (BOT, NESDC, NSO, DLT, OAE, MOTS). No fabrication.
+• Word limits per field are hard caps — cut, do not summarize past the limit.
+• Unknown values: use "—" not null or 0.
+• Sub-5 second parse target: telegraphic brevity, no filler phrases.
+
+EVENT: [${tag}] ${title}
+MACRO CONTEXT: ${ctx}
 `;
 
       if (agentType === 'overview') {

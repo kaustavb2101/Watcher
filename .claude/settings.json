@@ -25,6 +25,19 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const fs=require('fs'),p='c:/Users/Kaustav Bagchi/.claude/projects/c--Users-Kaustav-Bagchi-OneDrive-Desktop-Watcher/memory/session-log.txt'; try{fs.appendFileSync(p,new Date().toISOString()+' — session ended. Run pattern-extractor agent to capture learnings.\\n');}catch(e){}\"",
+            "timeout": 5,
+            "statusMessage": "Logging session for continuous learning..."
+          }
+        ]
+      }
     ]
   }
 }
