@@ -4576,9 +4576,11 @@ MACRO CONTEXT: ${ctx}
           <span class="card-h-l">🗺️ Regional Risk Mapping</span>
           <span style="font-size:10px;color:var(--muted)">Click any province for detailed analysis &amp; product recommendations</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">
-          ${regHtml || '<div style="color:var(--muted);padding:30px;text-align:center;font-size:13px">Run an analysis to see regional impact data</div>'}
-        </div>
+        <div id="svgMap" style="width:100%;min-height:200px"></div>
+        ${regHtml ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.08em;margin-bottom:10px;text-transform:uppercase">🎯 AI-Highlighted Provinces</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">${regHtml}</div>
+        </div>` : ''}
       </div>
   </div>`;
 
