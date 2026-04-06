@@ -13,6 +13,7 @@ import { BOT_MACRO_KB, BOT_META } from './bot-macro.js';
 import { COMMODITIES_KB, COMMODITY_META } from './commodities-worldbank.js';
 import { CLIMATE_RISK_RECORDS, CLIMATE_META } from './climate-risk.js';
 import { GISTDA_AGRI_RECORDS, GISTDA_META } from './gistda-agriculture.js';
+import { OAE_CROP_PROVINCES, getTopProvincesForCrop } from './oae-crop-provinces.js';
 import { TOURISM_PROVINCIAL_RECORDS, TOURISM_PROVINCIAL_META } from './tourism-provincial.js';
 import { PROVINCIAL_ECONOMY_RECORDS } from './provincial-economy.js';
 import { HOUSEHOLD_DEBT_RECORDS, DEBT_META } from './household-debt.js';
@@ -36,6 +37,7 @@ export const KnowledgeBase = {
   nso: { lfs: NSO_LFS_RECORDS, map: NSO_LFS_MAP, meta: NSO_LFS_META },
   climate: { risk: CLIMATE_RISK_RECORDS, meta: CLIMATE_META },
   gistda: { agri: GISTDA_AGRI_RECORDS, meta: GISTDA_META },
+  oae: { cropProvinces: OAE_CROP_PROVINCES, getTopProvinces: getTopProvincesForCrop },
   tourism: { provincial: TOURISM_PROVINCIAL_RECORDS, meta: TOURISM_PROVINCIAL_META },
   economy: { provincial: PROVINCIAL_ECONOMY_RECORDS },
   nso_full: null,

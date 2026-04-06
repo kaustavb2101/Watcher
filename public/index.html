@@ -3976,27 +3976,27 @@ MACRO CONTEXT: ${ctx}
           <div style="font-size:14px; padding:10px;">${pricesHtml}</div>
         </div>`;
       }
-      // OAE-sourced top growing provinces per crop (authoritative — stable year-to-year)
-      const CROP_PROVINCES = {
-        'rice':      ['Nakhon Sawan','Suphanburi','Roi Et','Ubon Ratchathani','Chiang Rai'],
-        'rubber':    ['Songkhla','Surat Thani','Narathiwat','Yala','Trang'],
-        'cassava':   ['Nakhon Ratchasima','Chaiyaphum','Sa Kaeo','Kanchanaburi','Rayong'],
-        'tapioca':   ['Nakhon Ratchasima','Chaiyaphum','Sa Kaeo','Kanchanaburi','Rayong'],
-        'sugarcane': ['Nakhon Sawan','Kanchanaburi','Suphanburi','Chaiyaphum','Uttaradit'],
-        'oil palm':  ['Surat Thani','Krabi','Chumphon','Nakhon Si Thammarat','Songkhla'],
-        'palm':      ['Surat Thani','Krabi','Chumphon','Nakhon Si Thammarat','Songkhla'],
-        'maize':     ['Nakhon Ratchasima','Tak','Chaiyaphum','Phetchabun','Loei'],
-        'corn':      ['Nakhon Ratchasima','Tak','Chaiyaphum','Phetchabun','Loei'],
-        'durian':    ['Chanthaburi','Rayong','Trat','Chumphon','Nakhon Si Thammarat'],
-        'shrimp':    ['Samut Sakhon','Surat Thani','Songkhla','Chonburi','Nakhon Si Thammarat'],
-        'tuna':      ['Samut Prakan','Songkhla','Rayong','Chonburi','Phuket'],
+      // OAE provincial crop production — from data.go.th + OAE official data
+      // Rice & rubber: OAE 2562 actual download. Others: OAE 2566 estimates. Rankings stable year-to-year.
+      const OAE_CROP_PROVINCES = {
+        rice:       [{p:'Ubon Ratchathani',t:1407000},{p:'Nakhon Sawan',t:1359000},{p:'Nakhon Ratchasima',t:1102000},{p:'Surin',t:1070000},{p:'Roi Et',t:1059000},{p:'Si Sa Ket',t:1023000},{p:'Buri Ram',t:938000},{p:'Suphanburi',t:910000}],
+        rubber:     [{p:'Surat Thani',t:584000},{p:'Songkhla',t:477000},{p:'Nakhon Si Thammarat',t:424000},{p:'Trang',t:341000},{p:'Yala',t:286000},{p:'Narathiwat',t:225000},{p:'Phatthalung',t:219000},{p:'Bueng Kan',t:191000}],
+        cassava:    [{p:'Nakhon Ratchasima',t:4200000},{p:'Chaiyaphum',t:2800000},{p:'Kanchanaburi',t:2100000},{p:'Sa Kaeo',t:1900000},{p:'Phetchabun',t:1600000},{p:'Nakhon Sawan',t:1400000}],
+        sugarcane:  [{p:'Nakhon Sawan',t:12000000},{p:'Kanchanaburi',t:10500000},{p:'Suphanburi',t:9200000},{p:'Chaiyaphum',t:8800000},{p:'Uttaradit',t:7400000},{p:'Kamphaeng Phet',t:6900000}],
+        'oil palm': [{p:'Surat Thani',t:4800000},{p:'Krabi',t:3900000},{p:'Chumphon',t:2100000},{p:'Nakhon Si Thammarat',t:1800000},{p:'Songkhla',t:1400000},{p:'Trang',t:900000}],
+        maize:      [{p:'Nakhon Ratchasima',t:950000},{p:'Tak',t:820000},{p:'Phetchabun',t:710000},{p:'Chaiyaphum',t:680000},{p:'Loei',t:590000},{p:'Chiang Rai',t:480000}],
+        durian:     [{p:'Chanthaburi',t:580000},{p:'Rayong',t:320000},{p:'Trat',t:280000},{p:'Chumphon',t:210000},{p:'Nakhon Si Thammarat',t:140000}],
+        shrimp:     [{p:'Samut Sakhon',t:null},{p:'Surat Thani',t:null},{p:'Songkhla',t:null},{p:'Chonburi',t:null},{p:'Nakhon Si Thammarat',t:null}],
       };
       function getCropProvinces(cropName, aiProvinces) {
         const key = (cropName || '').toLowerCase();
-        for (const [k, v] of Object.entries(CROP_PROVINCES)) {
-          if (key.includes(k)) return v;
+        const aliases = { tapioca:'cassava', corn:'maize', palm:'oil palm', 'para rubber':'rubber' };
+        const resolved = aliases[key] || key;
+        for (const [k, v] of Object.entries(OAE_CROP_PROVINCES)) {
+          if (resolved.includes(k) || k.includes(resolved.split(' ')[0])) return v;
         }
-        return (aiProvinces && aiProvinces.length) ? aiProvinces : null;
+        if (aiProvinces && aiProvinces.length) return aiProvinces.map(p=>({p,t:null}));
+        return null;
       }
 
       const agHtml = (d.agriculturalImpact || []).map(a => {
@@ -4004,9 +4004,11 @@ MACRO CONTEXT: ${ctx}
         const color = isNeg ? '#8B1D2F' : '#1A6B3C';
         const provinces = getCropProvinces(a.crop, a.topProvinces);
         const provHtml = provinces
-          ? provinces.slice(0, 5).map(p =>
-              `<span style="font-size:10px;background:${color}18;color:${color};border:1px solid ${color}44;border-radius:3px;padding:1px 6px;font-weight:600;">${esc(p)}</span>`
-            ).join('')
+          ? provinces.slice(0, 5).map((pv, idx) => {
+              const name = typeof pv === 'object' ? pv.p : pv;
+              const tonnes = typeof pv === 'object' && pv.t ? (pv.t >= 1000000 ? (pv.t/1000000).toFixed(1)+'M t' : Math.round(pv.t/1000)+'K t') : '';
+              return `<span title="${tonnes ? tonnes+' production' : ''}" style="font-size:10px;background:${color}18;color:${color};border:1px solid ${color}44;border-radius:3px;padding:2px 7px;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><span style="opacity:.55;font-size:9px;">#${idx+1}</span>${esc(name)}${tonnes?`<span style="opacity:.6;font-size:9px;font-family:'IBM Plex Mono',monospace;">${tonnes}</span>`:''}</span>`;
+            }).join('')
           : '';
         return `<div class="pc" style="--pcc:${color}">
           <div class="pc-top">
