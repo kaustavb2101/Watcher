@@ -556,3 +556,34 @@ if (window.DLT_VEHICLES['Bangkok']) {
   window.DLT_VEHICLES['Bangkok Metropolis'] = window.DLT_VEHICLES['Bangkok'];
   window.DLT_PROVINCE_TOTALS['Bangkok Metropolis'] = window.DLT_PROVINCE_TOTALS['Bangkok'];
 }
+
+// Province name aliases — map app canonical names → DLT spellings
+;(function() {
+  const T = window.DLT_PROVINCE_TOTALS;
+  const V = window.DLT_VEHICLES;
+  const aliases = [
+    ['Buri Ram',              'Buri Rum'],
+    ['Nong Bua Lam Phu',     'Nong Bua Lamphu'],
+    ['Chon Buri',             'Chonburi'],
+    ['Trat',                  'Trad'],
+    ['Sa Kaeo',               'Sra Kaew'],
+    ['Kanchanaburi',          'Khanchanaburi'],
+    ['Phetchaburi',           'Petchaburi'],
+    ['Prachuap Khiri Khan',   'Prachuap Kiri Khan'],
+    ['Phang Nga',             'Pang Nga'],
+    ['Samut Sakhon',          'Samut Sakorn'],
+    ['Nan',                   'nan'],
+  ];
+  aliases.forEach(([app, dlt]) => {
+    if (T[dlt] && !T[app]) T[app] = T[dlt];
+    if (V && V[dlt] && !V[app]) V[app] = V[dlt];
+  });
+  // Also expose a case-insensitive lookup helper
+  window.DLT_LOOKUP_PROVINCE = function(name) {
+    if (!name) return null;
+    if (T[name]) return T[name];
+    const lower = name.toLowerCase();
+    const key = Object.keys(T).find(k => k.toLowerCase() === lower);
+    return key ? T[key] : null;
+  };
+})();

@@ -694,3 +694,5 @@ window.PROVINCE_INTEL_KB = {
 if (window.PROVINCE_INTEL_KB["Bangkok Metropolis"] === null) {
   window.PROVINCE_INTEL_KB["Bangkok Metropolis"] = window.PROVINCE_INTEL_KB["Bangkok"];
 }
+// Canonical app name alias
+window.PROVINCE_INTEL_KB["Phang Nga"] = window.PROVINCE_INTEL_KB["Phangnga"];

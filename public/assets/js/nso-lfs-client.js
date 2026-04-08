@@ -83,3 +83,5 @@ window.NSO_LFS_KB = {
   "Phichit":                 { employed: 268.6,  unemployed: 3.9,  laborForce: 272.5,  unemploymentRate: 1.43 },
   "Phetchabun":              { employed: 462.2,  unemployed: 8.6,  laborForce: 470.8,  unemploymentRate: 1.83 },
 };
+// Canonical app name alias
+window.NSO_LFS_KB["Phang Nga"] = window.NSO_LFS_KB["Phangnga"];
