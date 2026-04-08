@@ -3408,7 +3408,25 @@
       const card = [...document.querySelectorAll('.ec')].find(c => (c.getAttribute('onclick') || '').includes(`'${key}'`));
       if (card) selEvent(card, key);
     }
-    function runCustom() {
+    /* ── RAG: retrieve KB context before analysis ────────────────────────── */
+    async function retrieveContext(query, province) {
+      try {
+        const res = await fetch('/api/retrieve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, province })
+        });
+        if (!res.ok) return '';
+        const data = await res.json();
+        if (!data.chunks?.length) return '';
+        return data.chunks.map(c => `[${c.label}]: ${c.value}`).join('\n');
+      } catch (e) {
+        console.warn('[RAG] retrieve failed — analysis will proceed without KB enrichment:', e);
+        return '';
+      }
+    }
+
+    async function runCustom() {
       const txt = document.getElementById('customTxt').value.trim();
       const scope = document.getElementById('customScope').value;
       if (!txt) {
@@ -3424,7 +3442,11 @@
         urban: 'Bangkok & Urban Centers',
         coastal: 'Southern Coast & Fishing'
       };
-      const ctx = `Custom event: ${txt}. Regional scope: ${scopeLabels[scope]}. Analyse all relevant Thai professions and industries with focus on ${scopeLabels[scope]}. Thailand workforce: 40M total, 30% agriculture (12M), 22% industry (9M), 48% services (19M). 50%+ informal.`;
+      const baseCtx = `Custom event: ${txt}. Regional scope: ${scopeLabels[scope]}. Analyse all relevant Thai professions and industries with focus on ${scopeLabels[scope]}. Thailand workforce: 40M total, 30% agriculture (12M), 22% industry (9M), 48% services (19M). 50%+ informal.`;
+      const ragData = await retrieveContext(txt, '');
+      const ctx = ragData
+        ? baseCtx + '\n\n<RETRIEVED_DATA source="TMLI-KB">\n' + ragData + '\n</RETRIEVED_DATA>\nGround your analysis in the retrieved data above. Macro context still applies nationally.'
+        : baseCtx;
       S.lastTag = 'CUSTOM EVENT';
       S.lastTitle = txt.substring(0, 80);
       S.lastCtx = ctx;
@@ -3565,104 +3587,87 @@
       const items = S.compareList;
       hide('results', 'emptyState', 'errorState');
       document.getElementById('loadState').classList.add('vis');
+      S.abortCtrl = new AbortController(); // required for fetchAnalysisAgent signal
       const results = [];
       try {
         for (let i = 0; i < items.length; i++) {
           const ev = items[i];
           document.getElementById('loadStep').textContent = `ANALYZING ${i + 1}/${items.length}: ${ev.title.substring(0, 20)}...`;
-          const ctx = EVENTS[ev.key]?.ctx || "No context";
-
-          // S.abortCtrl created in parent
+          const ctx = EVENTS[ev.key]?.ctx || ev.title;
           const p1 = fetchAnalysisAgent(ev.key, ev.title, ctx, 'overview');
           const p2 = fetchAnalysisAgent(ev.key, ev.title, ctx, 'labor');
           const p3 = fetchAnalysisAgent(ev.key, ev.title, ctx, 'commodities');
           const p4 = fetchAnalysisAgent(ev.key, ev.title, ctx, 'strategy');
           const [overview, labor, commodities, strategy] = await Promise.all([p1, p2, p3, p4]);
           const res = { ...overview, ...labor, ...commodities, ...strategy };
-
-          results.push({
-            key: ev.key,
-            title: ev.title,
-            data: res
-          });
+          results.push({ key: ev.key, title: ev.title, data: res });
         }
         renderCompare(results);
       } catch (err) {
         showError(err);
       } finally {
-        clearInterval(stepTimer);
         document.getElementById('loadState').classList.remove('vis');
       }
     }
     function renderCompare(results) {
       const resEl = document.getElementById('results');
+      const colW = Math.floor(80 / results.length);
+      const tdBase = `padding:11px 14px;border-bottom:1px solid var(--border);font-size:12px;`;
+      const thBase = `padding:11px 14px;text-align:center;border-right:1px solid var(--border);font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--ink);width:${colW}%`;
+
+      const row = (label, cells, style='') =>
+        `<tr ${style}><td style="${tdBase}font-weight:700;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">${label}</td>${cells}</tr>`;
+
+      const cell = (val, color='var(--ink)', mono=false) =>
+        `<td style="${tdBase}text-align:center;color:${color};${mono?'font-family:\'IBM Plex Mono\',monospace;font-size:14px;font-weight:800':''}">${val}</td>`;
+
+      const tableRows = [
+        row('Overall Sentiment', results.map(r => cell(r.data?.overallSentiment||'—', SENTIMENT_COLORS[r.data?.overallSentiment]||'var(--muted)')).join('')),
+        row('Impact Score', results.map(r => { const sc=r.data?.impactScore||0; return cell((sc>0?'+':'')+sc, scoreColor(sc), true); }).join('')),
+        row('Workers at Risk', results.map(r => cell(r.data?.workersAtRisk||'—')).join('')),
+        row('GDP Impact', results.map(r => cell(r.data?.gdpImpact||'—')).join('')),
+        row('NPL Trajectory (M6)', results.map(r => { const m6 = (r.data?.nplTrajectory||[]).find(t=>t.month===6); return cell(m6 ? (m6.nplDelta>=0?'+':'')+m6.nplDelta.toFixed(2)+'%' : '—', m6&&m6.nplDelta>1?'#E25555':'var(--ink)'); }).join(''), 'style="background:var(--gold-bg)"'),
+        row('AutoX Threat', results.map(r => { const t=r.data?.strategyInsight?.autoXThreats; return cell(esc(Array.isArray(t)?t[0]:t||'—')); }).join('')),
+        row('Key Opportunity', results.map(r => { const o=r.data?.strategyInsight?.strategicOpportunities; return cell(esc(Array.isArray(o)?o[0]:o||'—')); }).join('')),
+      ].join('');
+
+      const agriCols = results.map(r => `
+        <div>
+          <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--border)">${esc(r.title.substring(0,40))}${r.title.length>40?'…':''}</div>
+          ${(r.data.agriculturalImpact||[]).slice(0,5).map(a=>`
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
+              <span style="color:var(--muted)">${esc(a.icon||'')} ${esc(a.crop||'')}</span>
+              <span style="font-weight:700;color:${(a.impactScore||0)<0?'#E25555':'#4CAF82'}">${(a.impactScore||0)>0?'+':''}${a.impactScore||0}</span>
+            </div>`).join('')}
+        </div>`).join('');
+
       let html = `<div class="banner">
         <div class="b-left">
-          <div class="b-tag">SCENARIO COMPARISON</div>
-          <div class="b-title">Strategic Multi-Event Analysis</div>
+          <div class="b-tag">SCENARIO COMPARISON · ${results.length} EVENTS</div>
+          <div class="b-title">${results.map(r=>esc(r.title.substring(0,28))).join(' vs. ')}</div>
+        </div>
+        <div class="b-btns"><button class="bbn" onclick="cancelCompare();clearCompare();" style="background:transparent;border:1px solid var(--border);color:var(--muted)">✕ Close</button></div>
+      </div>
+      <div class="pane on" style="padding-top:0">
+        <div class="card" style="overflow-x:auto;padding:0">
+          <table style="width:100%;border-collapse:collapse;min-width:600px">
+            <thead><tr style="border-bottom:2px solid var(--border)">
+              <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;width:20%">Metric</th>
+              ${results.map(r=>`<th style="${thBase}">${esc(r.title.substring(0,28))}${r.title.length>28?'…':''}</th>`).join('')}
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="card-h-l">🌾 Agricultural / Commodity Impact</span></div>
+          <div style="display:grid;grid-template-columns:repeat(${results.length},1fr);gap:20px">${agriCols}</div>
         </div>
       </div>`;
 
-      // Main comparison table
-      html += `<div class="pane on" style="padding-top:0"><div class="card" style="overflow-x:auto; padding:0">
-        <table class="cmp-tbl" style="width:100%; border-collapse:collapse; min-width:800px;">
-          <thead>
-            <tr style="background:var(--ink); color:var(--paper)">
-              <th style="padding:15px; text-align:left; border-right:1px solid rgba(255,255,255,0.1)">Metric</th>
-              ${results.map(r => `<th style="padding:15px; text-align:center; border-right:1px solid rgba(255,255,255,0.1); width:${Math.floor(85 / results.length)}%">${esc(r.title)}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="padding:12px 15px; font-weight:700; border-bottom:1px solid var(--border)">Overall Impact</td>
-              ${results.map(r => `<td style="padding:12px 15px; text-align:center; border-bottom:1px solid var(--border); font-weight:700; color:${SENTIMENT_COLORS[r.data?.overallSentiment] || 'var(--muted)'}">${r.data?.overallSentiment || 'N/A'}</td>`).join('')}
-            </tr>
-            <tr>
-              <td style="padding:12px 15px; border-bottom:1px solid var(--border)">Impact Score</td>
-              ${results.map(r => `<td style="padding:12px 15px; text-align:center; border-bottom:1px solid var(--border); font-family:monospace; font-size:16px; color:${scoreColor(r.data?.impactScore || 0)}">${sign(r.data?.impactScore || 0)}${r.data?.impactScore || 0}</td>`).join('')}
-            </tr>
-            <tr>
-              <td style="padding:12px 15px; border-bottom:1px solid var(--border)">Workers at Risk</td>
-              ${results.map(r => `<td style="padding:12px 15px; text-align:center; border-bottom:1px solid var(--border)">${r.data.workersAtRisk}</td>`).join('')}
-            </tr>
-            <tr>
-              <td style="padding:12px 15px; border-bottom:1px solid var(--border)">GDP Impact</td>
-              ${results.map(r => `<td style="padding:12px 15px; text-align:center; border-bottom:1px solid var(--border)">${r.data.gdpImpact}</td>`).join('')}
-            </tr>
-            <tr style="background:var(--gold-bg)">
-              <td style="padding:12px 15px; font-weight:700; border-bottom:1px solid var(--border)">AutoX Strategic Threat</td>
-              ${results.map(r => `<td style="padding:12px 15px; font-size:12px; border-bottom:1px solid var(--border)">${Array.isArray(r.data.strategyInsight?.autoXThreats) ? r.data.strategyInsight.autoXThreats[0] : (r.data.strategyInsight?.autoXThreats || 'N/A')}</td>`).join('')}
-            </tr>
-            <tr>
-              <td style="padding:12px 15px; font-weight:700; border-bottom:1px solid var(--border)">Key Recommendation</td>
-              ${results.map(r => `<td style="padding:12px 15px; font-size:12px; border-bottom:1px solid var(--border)">${Array.isArray(r.data.strategyInsight?.strategicOpportunities) ? r.data.strategyInsight.strategicOpportunities[0] : (r.data.strategyInsight?.strategicOpportunities || 'N/A')}</td>`).join('')}
-            </tr>
-          </tbody>
-        </table>
-      </div>`;
-
-      // Agricultural side-by-side
-      html += `<div class="card">
-        <div class="card-h">🌾 Agricultural / Commodity Impact Comparison</div>
-        <div class="g${results.length}" style="gap:15px">
-          ${results.map(r => `
-            <div>
-              <div style="font-family:monospace; font-size:10px; margin-bottom:8px; background:var(--ink); color:var(--paper); padding:4px 8px; border-radius:3px">${esc(r.title.substring(0, 30))}…</div>
-              <div style="display:flex; flex-direction:column; gap:8px">
-                ${(r.data.agriculturalImpact || []).slice(0, 5).map(a => `
-                  <div style="font-size:11px; display:flex; justify-content:space-between; border-bottom:1px solid var(--border2); padding-bottom:4px">
-                    <span>${a.icon} ${a.crop}</span>
-                    <span style="color:${a.impactScore < 0 ? 'var(--red)' : 'var(--green)'}; font-weight:700">${sign(a.impactScore)}${a.impactScore}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div></div>`;
       resEl.innerHTML = html;
       show('results');
       resEl.classList.add('vis');
+      resEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     function toggleCompareMode() {
       S.compareMode = !S.compareMode;
@@ -3785,14 +3790,14 @@
         return MOCK_RESULT;
       }
 
-      // Check localStorage cache first (30 min TTL)
+      // Check localStorage cache first (24h TTL)
       try {
         const cacheKey = `tmli_cache_v2_${tag}_${title}`.replace(/\s+/g, '_').substring(0, 100);
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           const { data, ts } = JSON.parse(cached);
-          if (Date.now() - ts < 30 * 60 * 1000 && data) { // 30 min TTL
-            return data; // Return cached full result
+          if (Date.now() - ts < 24 * 60 * 60 * 1000 && data) { // 24h TTL
+            return data;
           } else {
             localStorage.removeItem(cacheKey); // Expired
           }
@@ -4347,7 +4352,6 @@ MACRO CONTEXT: ${ctx}
     <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('regional',this)">🌍 Regional</div>
     <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('timeline',this)">📅 Timeline</div>
     <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('recommendations',this)">💡 Actions</div>
-    <div class="tab" role="tab" aria-selected="false" tabindex="-1" onclick="switchTab('macro-trends',this)">📈 Macro Trends</div>
   </div>`;
 
       /* — OVERVIEW PANE — */
@@ -4593,8 +4597,6 @@ MACRO CONTEXT: ${ctx}
           const soc = scoreColor(so.impact || 0);
           return `<div class="occ-row">
         <span class="occ-name">${esc(so.name || '')}</span>
-        <div class="occ-bar"><div class="occ-fill" style="background:${soc};width:0" data-w="${pct(so.impact || 0)}"></div></div>
-        <span class="occ-val" style="color:${soc}">${sign(so.impact || 0)}${so.impact || 0}</span>
       </div>`;
         }).join('');
         const acts = (ind.keyActions || []).map(a => `<span class="act-chip" style="border-color:${ibc}44;color:${ibc}">${esc(a)}</span>`).join('');
@@ -4636,13 +4638,14 @@ MACRO CONTEXT: ${ctx}
         const branches = profile.branches || 0;
         const reg = r.region || profile.region || '';
 
-        // KPI 1: Population (sum of profession populations as proxy)
-        const totalPop = (profile.professions || []).reduce((s, p) => s + (p.population || 0), 0);
-        const popFmt = totalPop >= 1e6 ? (totalPop/1e6).toFixed(1)+'M' : totalPop > 0 ? fmtNum(totalPop) : '—';
-
         // KPI 2: Vehicles from DLT window global
         const _dltT = window.DLT_PROVINCE_TOTALS || {};
         const _core = nameClean.replace(' Metropolis','');
+
+        // KPI 1: Workforce from NSO LFS (employed persons in thousands × 1000)
+        const _lfsRH = (window.NSO_LFS_KB||{})[nameClean]||(window.NSO_LFS_KB||{})[_core];
+        const totalPop = _lfsRH ? Math.round((_lfsRH.employed||0)*1000) : (profile.professions || []).reduce((s, p) => s + (p.population || 0), 0);
+        const popFmt = totalPop >= 1e6 ? (totalPop/1e6).toFixed(2)+'M' : totalPop > 0 ? fmtNum(totalPop) : '—';
         const _dltRec = _dltT[nameClean] || _dltT[_core] || Object.entries(_dltT).find(([k])=>k.replace(/\s+/g,'').toLowerCase()===_core.replace(/\s+/g,'').toLowerCase())?.[1];
         const _dltTot = _dltRec ? (_dltRec.total || (_dltRec.motorcycle||0)+(_dltRec.sedan||0)+(_dltRec.pickup||0)) : (window.DLT_LOOKUP ? window.DLT_LOOKUP(nameClean) : 0);
         const vehFmt = _dltTot >= 1e6 ? (_dltTot/1e6).toFixed(2)+'M' : _dltTot > 0 ? fmtNum(_dltTot) : '—';
@@ -4661,14 +4664,14 @@ MACRO CONTEXT: ${ctx}
         return `<div class="wc reg-card" data-prov="${esc(nameClean)}" data-reg="${esc(reg)}" style="cursor:pointer;border-left:3px solid ${rc};padding:14px 14px 10px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div>
-          <div style="font-size:14px;font-weight:700;color:white;margin-bottom:4px">${esc(nameClean)}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">${esc(nameClean)}</div>
           <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${regCol}22;color:${regCol};font-weight:700;letter-spacing:.04em">${esc(reg).toUpperCase()}</span>
         </div>
         <span style="font-size:9px;background:var(--gold-bg);color:var(--gold);padding:3px 8px;border-radius:10px;font-weight:800;border:1px solid var(--gold)44;white-space:nowrap">🎯 ${branches} BR</span>
       </div>
       <div style="display:flex;gap:16px;margin-bottom:8px;padding-top:8px;border-top:1px solid var(--border)">
         <div>
-          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Population</div>
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Workforce</div>
           <div style="font-size:13px;font-weight:800;color:var(--ink)">${popFmt}</div>
         </div>
         <div>
@@ -4691,10 +4694,6 @@ MACRO CONTEXT: ${ctx}
           <span style="font-size:10px;color:var(--muted)">Click any province for detailed analysis &amp; product recommendations</span>
         </div>
         <div id="svgMap" style="width:100%;min-height:200px"></div>
-        ${regHtml ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-          <div style="font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.08em;margin-bottom:10px;text-transform:uppercase">🎯 AI-Highlighted Provinces</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">${regHtml}</div>
-        </div>` : ''}
       </div>
   </div>`;
 
@@ -4708,13 +4707,9 @@ MACRO CONTEXT: ${ctx}
       </div>
     </div>`).join('');
       const tableRows = (d.professions || []).slice(0, 12).map(p => {
-        const fc = scoreColor(p.impactScore || 0);
-        const sg3 = sign(p.impactScore || 0);
         return `<tr>
       <td class="ct-name">${p.icon || ''} ${esc(p.name || '')}</td>
       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${esc(fmtNum(p.workerCount) || '—')}</td>
-      <td><div class="bar-sm"><div class="bar-sm-fill" style="background:${fc};width:${pct(p.impactScore || 0)}%"></div></div></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:${fc}">${sg3}${p.impactScore || 0}</td>
       <td><span class="risk-badge ${riskClass(p.riskLevel || '')}">${esc(p.riskLevel || '')}</span></td>
     </tr>`;
       }).join('');
@@ -4728,6 +4723,7 @@ MACRO CONTEXT: ${ctx}
       const trajGdp     = traj.map(t => +(t.gdpDelta||0).toFixed(2));
       const trajIncome  = traj.map(t => +(t.incomeImpact||0).toFixed(2));
       const trajJson    = JSON.stringify({ months: trajMonths, npl: trajNpl, gdp: trajGdp, income: trajIncome });
+      window._pendingTrajData = traj.length > 0 ? { months: trajMonths, npl: trajNpl, gdp: trajGdp, income: trajIncome } : null;
 
       const tlPane = `<div id="pane-timeline" class="pane" role="tabpanel">
     ${traj.length > 0 ? `
@@ -4747,37 +4743,12 @@ MACRO CONTEXT: ${ctx}
         <div class="card-h"><span class="card-h-l">📋 Profession Summary</span></div>
         <div style="overflow-x:auto">
           <table class="ct">
-            <thead><tr><th>Profession</th><th>Workers</th><th>Impact</th><th>Score</th><th>Risk</th></tr></thead>
+            <thead><tr><th>Profession</th><th>Workers</th><th>Risk</th></tr></thead>
             <tbody>${tableRows}</tbody>
           </table>
         </div>
       </div>
     </div>
-    <script>
-    (function(){
-      var tData = ${trajJson};
-      if (!tData.months || !tData.months.length) return;
-      loadECharts().then(function(){
-        var el = document.getElementById('trajChart');
-        if (!el) return;
-        var chart = echarts.init(el, null, { renderer: 'canvas' });
-        chart.setOption({
-          backgroundColor: 'transparent',
-          grid: { left: 40, right: 20, top: 20, bottom: 30 },
-          tooltip: { trigger: 'axis', backgroundColor: '#1a1d2e', borderColor: '#333', textStyle: { color: '#e8e0d0', fontSize: 11 } },
-          legend: { data: ['NPL Δ%','GDP Δ%','Income Δ%'], bottom: 0, textStyle: { color: '#8A96A3', fontSize: 10 } },
-          xAxis: { type: 'category', data: tData.months, axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#8A96A3', fontSize: 10 } },
-          yAxis: { type: 'value', axisLabel: { color: '#8A96A3', fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: '#222' } } },
-          series: [
-            { name: 'NPL Δ%', type: 'line', smooth: true, data: tData.npl, lineStyle: { color: '#E25555', width: 2.5 }, itemStyle: { color: '#E25555' }, areaStyle: { color: 'rgba(226,85,85,0.08)' }, symbol: 'circle', symbolSize: 6 },
-            { name: 'GDP Δ%', type: 'line', smooth: true, data: tData.gdp, lineStyle: { color: '#6B7FD7', width: 2, type: 'dashed' }, itemStyle: { color: '#6B7FD7' }, symbol: 'circle', symbolSize: 5 },
-            { name: 'Income Δ%', type: 'line', smooth: true, data: tData.income, lineStyle: { color: '#B8943A', width: 2, type: 'dotted' }, itemStyle: { color: '#B8943A' }, symbol: 'diamond', symbolSize: 6 }
-          ]
-        });
-        window.addEventListener('resize', function(){ chart.resize(); });
-      });
-    })();
-    <\/script>
   </div>`;
 
       /* — RECOMMENDATIONS PANE — */
@@ -4824,10 +4795,40 @@ MACRO CONTEXT: ${ctx}
 
       const combinedBanner = banner.replace('class="b-btns">', `class="b-btns">${instBtn}`);
 
-      resEl.innerHTML = combinedBanner + kpi + tabs + ovPane + profPane + indPane + commodPane + regPane + tlPane + recPane + macroTrendsPane;
+      resEl.innerHTML = combinedBanner + kpi + tabs + ovPane + profPane + indPane + commodPane + regPane + tlPane + recPane;
       hide('emptyState', 'loadState', 'errorState');
       show('results');
       resEl.classList.add('vis');
+
+      // Init NPL trajectory chart (script tags in innerHTML don't execute)
+      // Defer so ECharts measures the element after the DOM has rendered
+      if (window._pendingTrajData) {
+        const _td = window._pendingTrajData;
+        setTimeout(function() { loadECharts().then(function() {
+          const el = document.getElementById('trajChart');
+          if (!el) return;
+          if (window._trajChartInstance) { try { window._trajChartInstance.dispose(); } catch(e){} }
+          const chart = echarts.init(el, null, { renderer: 'canvas' });
+          window._trajChartInstance = chart;
+          chart.setOption({
+            backgroundColor: 'transparent',
+            grid: { left: 40, right: 20, top: 20, bottom: 30 },
+            tooltip: { trigger: 'axis', backgroundColor: '#1a1d2e', borderColor: '#333', textStyle: { color: '#e8e0d0', fontSize: 11 } },
+            legend: { data: ['NPL Δ%','GDP Δ%','Income Δ%'], bottom: 0, textStyle: { color: '#8A96A3', fontSize: 10 } },
+            xAxis: { type: 'category', data: _td.months, axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#8A96A3', fontSize: 10 } },
+            yAxis: { type: 'value', axisLabel: { color: '#8A96A3', fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: '#222' } } },
+            series: [
+              { name: 'NPL Δ%', type: 'line', smooth: true, data: _td.npl, lineStyle: { color: '#E25555', width: 2.5 }, itemStyle: { color: '#E25555' }, areaStyle: { color: 'rgba(226,85,85,0.08)' }, symbol: 'circle', symbolSize: 6 },
+              { name: 'GDP Δ%', type: 'line', smooth: true, data: _td.gdp, lineStyle: { color: '#6B7FD7', width: 2, type: 'dashed' }, itemStyle: { color: '#6B7FD7' }, symbol: 'circle', symbolSize: 5 },
+              { name: 'Income Δ%', type: 'line', smooth: true, data: _td.income, lineStyle: { color: '#B8943A', width: 2, type: 'dotted' }, itemStyle: { color: '#B8943A' }, symbol: 'diamond', symbolSize: 6 }
+            ]
+          });
+          if (window._trajResizeHandler) window.removeEventListener('resize', window._trajResizeHandler);
+          window._trajResizeHandler = function() { chart.resize(); };
+          window.addEventListener('resize', window._trajResizeHandler);
+        }); }, 100);
+        window._pendingTrajData = null;
+      }
 
       // Async fetch live Skill Mapping Data
       fetchSkillMapping();
@@ -4867,6 +4868,13 @@ MACRO CONTEXT: ${ctx}
       }
       if (name === 'regional') {
         changeMapLayer();
+      }
+      if (name === 'timeline') {
+        // ECharts initialised while pane was hidden — must resize after it becomes visible
+        setTimeout(() => {
+          const el = document.getElementById('trajChart');
+          if (el && window._trajChartInstance) window._trajChartInstance.resize();
+        }, 50);
       }
     }
 
@@ -5025,46 +5033,76 @@ MACRO CONTEXT: ${ctx}
                 return { name: prov, score: score, totalVehicles: totalVehicles };
             });
 
-            // "Subsequent rows are the provinces under the specific region sorted by vehicle population size"
-            pData.sort((a, b) => b.totalVehicles - a.totalVehicles);
+            // Pre-compute KPIs for all provinces, then sort by workforce (largest first)
+            const enriched = pData.map(p => {
+                const _pp = (typeof PROVINCE_PROFILES !== 'undefined') ? (PROVINCE_PROFILES[p.name] || PROVINCE_PROFILES[p.name+' Metropolis'] || {branches:0,professions:[]}) : {branches:0,professions:[]};
+                const _lfsEntry = (window.NSO_LFS_KB||{})[p.name]||(window.NSO_LFS_KB||{})[p.name.replace(' Metropolis','')];
+                const _pop = _lfsEntry ? Math.round((_lfsEntry.employed||0)*1000) : (_pp.professions||[]).reduce((s,pr)=>s+(pr.population||0),0);
+                const _dltR = (window.DLT_PROVINCE_TOTALS||{})[p.name]||(window.DLT_PROVINCE_TOTALS||{})[p.name.replace(' Metropolis','')];
+                const _veh = p.totalVehicles||(_dltR?(_dltR.total||0):0);
+                const _intel = (window.PROVINCE_INTEL_KB||{})[p.name]||(window.PROVINCE_INTEL_KB||{})[p.name.replace(' Metropolis','')];
+                const _iProfs = _intel&&_intel.professions ? _intel.professions : [];
+                const _avgInc = _intel&&_intel.avgIncome ? _intel.avgIncome : (_iProfs.length>0 ? Math.round(_iProfs.reduce((s,pr)=>s+(pr.avgIncome||0),0)/_iProfs.length) : 0);
+                return { ...p, _pp, _pop, _veh, _avgInc };
+            });
+            enriched.sort((a, b) => b._pop - a._pop);
 
-            const avgScore = pData.length > 0 ? (pData.reduce((s, p) => s + p.score, 0) / pData.length) : 0;
+            // Region aggregates for header
+            const aggWorkforce = enriched.reduce((s, p) => s + p._pop, 0);
+            const aggVehicles  = enriched.reduce((s, p) => s + p._veh, 0);
+            const incProvinces = enriched.filter(p => p._avgInc > 0);
+            const aggAvgInc    = incProvinces.length > 0 ? Math.round(incProvinces.reduce((s, p) => s + p._avgInc, 0) / incProvinces.length) : 0;
+            const aggImpact    = incProvinces.length > 0 ? Math.round(incProvinces.reduce((s, p) => s + p._avgInc * Math.abs(p.score) / 100, 0) / incProvinces.length) : 0;
+            const avgScore     = enriched.length > 0 ? enriched.reduce((s, p) => s + p.score, 0) / enriched.length : 0;
+            const _fmtAgg = n => n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n > 0 ? n.toLocaleString() : '—';
+
             const regColors = { Northeast:'#6B7FD7', North:'#4CAF82', South:'#F5A623', East:'#9B59B6', Central:'#3498DB', West:'#E67E22' };
             const regCol = regColors[rName] || '#888';
 
             gridHtml += `<div>
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <span style="font-size:11px;font-weight:800;color:${regCol};letter-spacing:.08em;text-transform:uppercase">${rName}</span>
-                <span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">Avg impact: <span style="color:${scoreBorder(avgScore)};font-weight:700">${avgScore>0?'+':''}${avgScore.toFixed(0)}</span></span>
-                <div style="flex:1;height:1px;background:var(--border)"></div>
+              <div style="margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <span style="font-size:11px;font-weight:800;color:${regCol};letter-spacing:.08em;text-transform:uppercase">${rName}</span>
+                  <div style="flex:1;height:1px;background:var(--border)"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:8px;background:var(--paper);border:1px solid var(--border);border-left:3px solid ${regCol};border-radius:5px;">
+                  <div style="text-align:center">
+                    <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Total Workforce</div>
+                    <div style="font-size:11px;font-weight:800;color:var(--ink)">${_fmtAgg(aggWorkforce)}</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Total Vehicles</div>
+                    <div style="font-size:11px;font-weight:800;color:var(--ink)">${_fmtAgg(aggVehicles)}</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Avg Income/mo</div>
+                    <div style="font-size:11px;font-weight:800;color:var(--gold)">${aggAvgInc > 0 ? '฿'+aggAvgInc.toLocaleString() : '—'}</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Avg Income Impact</div>
+                    <div style="font-size:11px;font-weight:800;color:${scoreBorder(avgScore)}">${aggImpact > 0 ? (avgScore<0?'−':'+')+' ฿'+aggImpact.toLocaleString() : '—'}</div>
+                  </div>
+                </div>
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">`;
 
-            for (const p of pData) {
+            for (const p of enriched) {
                 const bc = scoreBorder(p.score);
                 const sl = scoreLabel(p.score);
-                // KB lookups for card KPIs
-                const _pp = (typeof PROVINCE_PROFILES !== 'undefined') ? (PROVINCE_PROFILES[p.name] || PROVINCE_PROFILES[p.name+' Metropolis'] || {branches:0,professions:[]}) : {branches:0,professions:[]};
-                const _pop = (_pp.professions||[]).reduce((s,pr)=>s+(pr.population||0),0);
-                const popFmt = _pop>=1e6?(_pop/1e6).toFixed(1)+'M':_pop>0?_pop.toLocaleString():'—';
-                const _dltR = (window.DLT_PROVINCE_TOTALS||{})[p.name]||(window.DLT_PROVINCE_TOTALS||{})[p.name.replace(' Metropolis','')];
-                const _veh = p.totalVehicles||(_dltR?(_dltR.total||0):0);
+                const { _pp, _pop, _veh, _avgInc } = p;
+                const popFmt = _pop>=1e6?(_pop/1e6).toFixed(2)+'M':_pop>0?_pop.toLocaleString():'—';
                 const vehFmt = _veh>=1e6?(_veh/1e6).toFixed(2)+'M':_veh>0?_veh.toLocaleString():'—';
-                const _intel = (window.PROVINCE_INTEL_KB||{})[p.name]||(window.PROVINCE_INTEL_KB||{})[p.name.replace(' Metropolis','')]||(window.PROVINCE_INTEL_KB||{})['Bangkok'];
-                // avgIncome is computed from professions[] if no top-level field
-                const _iProfs = _intel&&_intel.professions ? _intel.professions : [];
-                const _avgInc = _intel&&_intel.avgIncome ? _intel.avgIncome : (_iProfs.length>0 ? Math.round(_iProfs.reduce((s,pr)=>s+(pr.avgIncome||0),0)/_iProfs.length) : 0);
                 const incFmt = _avgInc>0 ? '฿'+_avgInc.toLocaleString() : '—';
                 const branchBadge = _pp.branches>0?`<span style="font-size:8px;color:var(--gold);font-weight:700;white-space:nowrap">🎯 ${_pp.branches}</span>`:'';
 
                 gridHtml += `<div class="prov-card" data-prov="${p.name}" data-reg="${rName}" style="cursor:pointer;background:var(--paper);border:1px solid var(--border);border-left:3px solid ${bc};border-radius:5px;padding:10px 10px 8px;transition:0.15s;">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                    <span style="font-size:12px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${p.name}">${p.name}</span>
+                    <span style="font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${p.name}">${p.name}</span>
                     ${branchBadge}
                   </div>
                   <div style="display:flex;gap:12px;margin-bottom:6px;padding-top:2px;border-top:1px solid var(--border);">
                     <div>
-                      <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Population</div>
+                      <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px">Workforce</div>
                       <div style="font-size:12px;font-weight:800;color:var(--ink)">${popFmt}</div>
                     </div>
                     <div>
@@ -5076,7 +5114,7 @@ MACRO CONTEXT: ${ctx}
                       <div style="font-size:12px;font-weight:800;color:var(--gold)">${incFmt}/mo</div>
                     </div>
                   </div>
-                  <div style="font-size:9px;color:${bc};font-weight:700;letter-spacing:.04em">${sl} <span style="font-family:'IBM Plex Mono',monospace;opacity:.8">${p.score>0?'+':''}${p.score}</span></div>
+                  <div style="font-size:9px;color:var(--gold);font-weight:700;letter-spacing:.04em">${_avgInc>0 ? (p.score<0?'−':'+')+' ฿'+Math.round(_avgInc*Math.abs(p.score)/100).toLocaleString()+'/mo income impact' : '<span style="color:var(--muted)">income data pending</span>'}</div>
                 </div>`;
             }
             gridHtml += `</div></div>`;
@@ -5113,12 +5151,12 @@ MACRO CONTEXT: ${ctx}
         const data = await Promise.race([Promise.all(fetches), new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))]);
 
         return data.map(h => {
-          const val = h.data?.data?.[0]?.value ? parseFloat(h.data.data[0].value) : parseFloat((Math.random() * 80 + 20).toFixed(1));
+          const val = h.data?.data?.[0]?.value ? parseFloat(h.data.data[0].value) : null;
           return { region: h.region, val };
         });
       } catch (err) {
         console.error("GISTDA/Climate fetch failed", err);
-        return hubs.map(h => ({ region: h.region, val: parseFloat((Math.random() * 80 + 20).toFixed(1)) }));
+        return hubs.map(h => ({ region: h.region, val: null }));
       }
     }
 
@@ -5298,11 +5336,27 @@ MACRO CONTEXT: ${ctx}
           <div style="font-size:11px;color:#555;margin-top:4px">${esc(r.description||'')} <span style="color:#B8943A;font-weight:700">[${esc(r.linkedProduct||'')}]</span></div>
         </div>`).join('');
 
-      const regional = (d.regionalImpact || []).slice(0,10).map(r =>
-        `<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px">${esc(r.province||'')}</td>
+      const regional = (d.regionalImpact || []).slice(0,10).map(r => {
+        const _rIntel = (window.PROVINCE_INTEL_KB||{})[r.province?.replace(' Province','')]||(window.PROVINCE_INTEL_KB||{})[r.province?.replace(' Province','').replace(' Metropolis','')];
+        const _rProfs = _rIntel?.professions || [];
+        const _rInc = _rIntel?.avgIncome || (_rProfs.length > 0 ? Math.round(_rProfs.reduce((s,p)=>s+(p.avgIncome||0),0)/_rProfs.filter(p=>p.avgIncome>0).length) : 0);
+        const _incImpact = _rInc > 0 ? Math.round(_rInc * Math.abs(r.impactScore||0) / 100) : 0;
+        return `<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px">${esc(r.province||'')}</td>
          <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${esc(r.region||'')}</td>
-         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;color:${r.impactScore<-30?'#c0392b':r.impactScore>0?'#27ae60':'#e67e22'}">${r.impactScore>0?'+':''}${r.impactScore||0}</td>
-         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${esc(r.riskFactor||'')}</td></tr>`).join('');
+         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;color:${(r.impactScore||0)<-30?'#c0392b':(r.impactScore||0)>0?'#27ae60':'#e67e22'}">${_incImpact > 0 ? (r.impactScore<0?'−':'+')+' ฿'+_incImpact.toLocaleString()+'/mo' : (r.impactScore>0?'+':'')+r.impactScore}</td>
+         <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${esc(r.riskFactor||'')}</td></tr>`;
+      }).join('');
+
+      const profTable = (d.professions || []).slice(0,10).map(p =>
+        `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px">${p.icon||''} ${esc(p.name||'')}</td>
+         <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${fmtNum(p.workerCount)||'—'}</td>
+         <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;color:${p.riskLevel==='Critical'?'#c0392b':p.riskLevel==='High'?'#e67e22':'#27ae60'}">${esc(p.riskLevel||'—')}</td></tr>`).join('');
+
+      const nplRows = (d.nplTrajectory || []).map(t =>
+        `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:center">M${t.month}</td>
+         <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:center;color:${(t.nplDelta||0)>1?'#c0392b':'#555'};font-weight:700">${t.nplDelta>=0?'+':''}${(t.nplDelta||0).toFixed(2)}%</td>
+         <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:center;color:#555">${t.gdpDelta>=0?'+':''}${(t.gdpDelta||0).toFixed(2)}%</td>
+         <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:center;color:#B8943A">${t.incomeImpact>=0?'+':''}${(t.incomeImpact||0).toFixed(1)}%</td></tr>`).join('');
 
       const html = `<div id="pdf-report" style="font-family:Arial,sans-serif;color:#1a1a2e;background:white;padding:40px;max-width:800px;margin:0 auto">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #B8943A;padding-bottom:20px;margin-bottom:24px">
@@ -5328,16 +5382,39 @@ MACRO CONTEXT: ${ctx}
           <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:12px">EXECUTIVE RECOMMENDATIONS</div>
           ${recs || '<p style="color:#888;font-size:12px">No recommendations available.</p>'}
         </div>
+        ${profTable ? `<div style="margin-bottom:24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:10px">WORKFORCE IMPACT BY PROFESSION</div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:#f5f0e8">
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">PROFESSION</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">WORKERS</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">RISK LEVEL</th>
+            </tr></thead>
+            <tbody>${profTable}</tbody>
+          </table>
+        </div>` : ''}
         ${regional ? `<div style="margin-bottom:24px">
           <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:10px">REGIONAL IMPACT ASSESSMENT</div>
           <table style="width:100%;border-collapse:collapse">
             <thead><tr style="background:#f5f0e8">
-              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">PROVINCE</th>
-              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">REGION</th>
-              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">SCORE</th>
-              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em">KEY RISK</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">PROVINCE</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">REGION</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">INCOME IMPACT</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700">KEY RISK</th>
             </tr></thead>
             <tbody>${regional}</tbody>
+          </table>
+        </div>` : ''}
+        ${nplRows ? `<div style="margin-bottom:24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#888;margin-bottom:10px">18-MONTH NPL TRAJECTORY</div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:#f5f0e8">
+              <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700">MONTH</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700">NPL Δ</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700">GDP Δ</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700">INCOME Δ</th>
+            </tr></thead>
+            <tbody>${nplRows}</tbody>
           </table>
         </div>` : ''}
         <div style="border-top:1px solid #eee;padding-top:12px;font-size:9px;color:#aaa;display:flex;justify-content:space-between">
@@ -5552,7 +5629,7 @@ MACRO CONTEXT: ${ctx}
       const _vfmt = n => n >= 1e6 ? (n/1e6).toFixed(2)+'M' : (n||0).toLocaleString();
       const vehicleTotal  = dltTotal > 0 ? _vfmt(dltTotal) : '-';
       const vehicleBreak  = dltDetail ? `🏍️ ${_vfmt(dltDetail.motorcycle||0)} | 🚗 ${_vfmt(dltDetail.sedan||0)} | 🛻 ${_vfmt(dltDetail.pickup||0)} | 🚜 ${_vfmt(Math.round((dltDetail.pickup||0)*0.12))}` : '';
-      const gppMillion   = gppData ? '฿' + (gppData.gpp / 1000).toLocaleString('en-US', {maximumFractionDigits:1}) + 'B THB' : '-';
+      const gppMillion   = gppData ? '฿' + (gppData.gpp / 1000).toLocaleString('en-US', {maximumFractionDigits:1}) + 'B' : '-';
       const unemployRate = nsoData ? nsoData.unemploymentRate.toFixed(2) + '%' : '—';
       const laborForce   = nsoData ? (nsoData.laborForce).toFixed(0) + 'k' : '—';
       const hubBadge     = gppData ? `<span style="font-size:9px; padding:2px 6px; border-radius:3px; background:rgba(184,148,58,0.15); color:var(--gold); font-weight:700">${gppData.hubType}</span>` : '';
@@ -5562,7 +5639,9 @@ MACRO CONTEXT: ${ctx}
       const stressColor  = intelData ? (intelData.stressIndex > 0.75 ? '#E25555' : intelData.stressIndex > 0.55 ? '#F5A623' : '#4CAF82') : '#aaa';
       // Professions from PROVINCE_INTEL_KB (preferred) or fallback to PROVINCE_PROFILES
       const intelProfessions = intelData ? intelData.professions : null;
-      const avgProvIncome = (intelData && intelData.avgIncome) ? intelData.avgIncome : 15000;
+      const _allProfs = intelProfessions || profile.professions || [];
+      const _computedInc = _allProfs.length > 0 ? Math.round(_allProfs.reduce((s, p) => s + (p.avgIncome || 0), 0) / _allProfs.filter(p => p.avgIncome > 0).length) : 0;
+      const avgProvIncome = (intelData && intelData.avgIncome) ? intelData.avgIncome : (_computedInc > 0 ? _computedInc : 12000);
       // Debt stress test calculations (assumes 5-year amortization on household debt)
       const rawDebtHH    = intelData ? intelData.debtPerHousehold : 0;
       const monthlyDS    = rawDebtHH > 0 ? Math.round(rawDebtHH / 60) : 0;
@@ -5590,52 +5669,72 @@ MACRO CONTEXT: ${ctx}
           }
           fi++;
         }
+        const _scenarioScore = S.lastResult ? (S.lastResult.impactScore || 0) : 0;
         const profListHTML = combinedProfs.slice(0,10).map(p => {
-        const inc = p.avgIncome ? `<span style="color:var(--gold);font-weight:bold">฿${Math.floor(p.avgIncome).toLocaleString()}/mo</span>` : '';
-        const trend = p.trend ? ` <span style="font-size:8px; color:${p.trend==='Growing'?'#4CAF82':p.trend==='Declining'?'#E25555':'#aaa'}">${p.trend==='Growing'?'↑':p.trend==='Declining'?'↓':'→'}</span>` : '';
-        const cnt = p.workers ? ` (${(p.workers).toLocaleString()})` : (p.population ? ` (${fmtNum(p.population)})` : '');
-        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.05)">
-          <span style="font-size:11px; color:var(--muted)">${esc(p.name)}${cnt}${trend}</span><span style="font-size:11px">${inc || ''}</span></div>`;
-      }).join('');
+          const inc = p.avgIncome ? `฿${Math.floor(p.avgIncome).toLocaleString()}` : '';
+          const impactAmt = p.avgIncome && _scenarioScore !== 0 ? Math.round(p.avgIncome * Math.abs(_scenarioScore) / 100) : 0;
+          const impactStr = impactAmt > 0 ? `<span style="font-size:10px;color:${_scenarioScore<0?'#E25555':'#4CAF82'};font-weight:700;margin-left:6px">${_scenarioScore<0?'−':'+'} ฿${impactAmt.toLocaleString()}/mo</span>` : '';
+          const trend = p.trend ? ` <span style="font-size:8px;color:${p.trend==='Growing'?'#4CAF82':p.trend==='Declining'?'#E25555':'#aaa'}">${p.trend==='Growing'?'↑':p.trend==='Declining'?'↓':'→'}</span>` : '';
+          const cnt = p.workers ? ` (${(p.workers).toLocaleString()})` : (p.population ? ` (${fmtNum(p.population)})` : '');
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--muted)">${esc(p.name)}${cnt}${trend}</span>
+            <span style="font-size:11px;text-align:right;white-space:nowrap"><span style="color:var(--gold);font-weight:bold">${inc}</span>${impactStr}</span>
+          </div>`;
+        }).join('');
 
       // ── DATA INTELLIGENCE STRIP HTML ────────────────────────────────────────
+      const vehColHTML = dltDetail ? [
+        { icon:'🏍️', label:'Motorcycles',  val: dltDetail.motorcycle||0 },
+        { icon:'🚗', label:'Sedan/Passenger', val: dltDetail.sedan||0 },
+        { icon:'🛻', label:'Pickup Trucks', val: dltDetail.pickup||0 },
+        { icon:'🚜', label:'Agricultural',  val: Math.round((dltDetail.pickup||0)*0.12) }
+      ].map(v => `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--muted)">${v.icon} ${v.label}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--ink)">${_vfmt(v.val)}</span>
+      </div>`).join('') : '<div style="font-size:11px;color:var(--muted)">DLT data unavailable</div>';
+
       const dataStrip = `
-        <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:14px; padding:12px; background:var(--ink); border-radius:8px; border:1px solid rgba(255,255,255,0.08)">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; padding:12px; background:var(--paper); border-radius:8px; border:1px solid var(--border)">
           <div style="text-align:center">
             <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">🚗 DLT Vehicles</div>
-            <div style="font-size:14px; font-weight:800; color:white">${vehicleTotal}</div>
-            <div style="font-size:7px; color:rgba(255,255,255,0.35)">31 Mar 2026 · สะสม</div>
-            ${vehicleBreak ? `<div style="font-size:7px; color:rgba(255,255,255,0.25); margin-top:1px">${vehicleBreak}</div>` : ''}
+            <div style="font-size:14px; font-weight:800; color:var(--ink)">${vehicleTotal}</div>
+            <div style="font-size:7px; color:var(--muted)">31 Mar 2026 · สะสม</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">📊 GPP 2566 ${hubBadge}</div>
-            <div style="font-size:14px; font-weight:800; color:white">${gppMillion}</div>
-            <div style="font-size:7px; color:rgba(255,255,255,0.35)">${gppData ? `Mfg ${Math.round(gppData.manufacturing*100)}% · Svc ${Math.round(gppData.services*100)}%` : 'NESDC estimate'}</div>
+            <div style="font-size:14px; font-weight:800; color:var(--ink)">${gppMillion}</div>
+            <div style="font-size:7px; color:var(--muted)">${gppData ? `Mfg ${Math.round(gppData.manufacturing*100)}% · Svc ${Math.round(gppData.services*100)}%` : 'NESDC estimate'}</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">👷 Labor Force</div>
-            <div style="font-size:14px; font-weight:800; color:white">${laborForce}</div>
-            <div style="font-size:7px; color:rgba(255,255,255,0.35)">NSO Q3/2025</div>
+            <div style="font-size:14px; font-weight:800; color:var(--ink)">${laborForce}</div>
+            <div style="font-size:7px; color:var(--muted)">NSO Q3/2025</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">📉 Unemployment</div>
             <div style="font-size:14px; font-weight:800; color:${parseFloat(unemployRate)>2?'#E25555':'#4CAF82'}">${unemployRate}</div>
-            <div style="font-size:7px; color:rgba(255,255,255,0.35)">NSO Q3/2025</div>
+            <div style="font-size:7px; color:var(--muted)">NSO Q3/2025</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">🏦 HH Debt</div>
             <div style="font-size:14px; font-weight:800; color:${stressColor}">${debtHH}</div>
-            <div style="font-size:7px; color:rgba(255,255,255,0.35)">${debtRatio} debt-to-income</div>
+            <div style="font-size:7px; color:var(--muted)">${debtRatio} debt-to-income</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px">💥 Debt Service</div>
             <div style="font-size:14px; font-weight:800; color:${nplRisk}">${monthlyDS > 0 ? dscPct + '%' : '—'}</div>
-            <div style="font-size:7px; color:rgba(255,255,255,0.35)">${monthlyDS > 0 ? `${nplLabel} · post-shock: ${stressedDsc}%` : 'No debt data'}</div>
+            <div style="font-size:7px; color:var(--muted)">${monthlyDS > 0 ? `${nplLabel} · post-shock: ${stressedDsc}%` : 'No debt data'}</div>
           </div>
         </div>
-        <div style="margin-bottom:14px">
-          <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:6px">💼 Provincial Workforce Breakdown (NSO/MOL)</div>
-          ${profListHTML}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
+          <div>
+            <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:6px">💼 Provincial Workforce Breakdown (NSO/MOL)</div>
+            ${profListHTML}
+          </div>
+          <div>
+            <div style="font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:6px">🚗 Provincial Vehicles Breakdown (DLT)</div>
+            ${vehColHTML}
+          </div>
         </div>
       `;
 
@@ -5656,7 +5755,12 @@ MACRO CONTEXT: ${ctx}
         const _baseTag   = S.lastTag   || 'MACRO · 2026';
         const _provTag   = `province:${name}:${_baseTag}`;
         const _provTitle = S.lastTitle || 'Thailand Macro-Labor Outlook 2026';
-        const _provCtx   = S.lastCtx   || `Thailand 2026 macro context: GDP 1.6–1.7%, household debt ~90% GDP, 50%+ informal workers, US 19% tariff impact, oil near $80/bbl, structural slowdown. Province: ${name}. Region: ${region || 'Unknown'}. Branch count: ${branches}. Key sectors: ${professions.split(',').slice(0,3).join(',')||'diverse'}.`;
+        const _baseCtx   = S.lastCtx   || `Thailand 2026 macro context: GDP 1.6–1.7%, household debt ~90% GDP, 50%+ informal workers, US 19% tariff impact, oil near $80/bbl, structural slowdown. Province: ${name}. Region: ${region || 'Unknown'}. Branch count: ${branches}. Key sectors: ${professions.split(',').slice(0,3).join(',')||'diverse'}.`;
+        // RAG: enrich with province-specific KB data (debt, LFS, GPP, climate, crops)
+        const _ragData   = await retrieveContext(professions || name, name);
+        const _provCtx   = _ragData
+          ? _baseCtx + '\n\n<RETRIEVED_DATA source="TMLI-KB">\n' + _ragData + '\n</RETRIEVED_DATA>\nUse the retrieved data to give province-specific figures. Do not contradict it.'
+          : _baseCtx;
         const d = await fetchAnalysisAgent(_provTag, _provTitle, _provCtx, 'province', name, branches, professions);
         const score = d.impactScore || 0;
         const color = scoreColor(score);
@@ -5665,11 +5769,7 @@ MACRO CONTEXT: ${ctx}
             ${dataStrip}
             <div style="font-size:10px; color:var(--muted); margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px; line-height:1.4">PREDOMINANT PROFESSIONS &amp; POPULATION:<br> ${professions.toUpperCase()}</div>
             
-            <div class="dd-ai-t">ESTIMATED HOUSEHOLD MONTHLY IMPACT</div>
-            <div style="font-size:28px; font-weight:900; color:${color}; margin-bottom:4px">${score < 0 ? '-' : '+'}฿${Math.abs(Math.round(avgProvIncome * (Math.abs(score)/100))).toLocaleString()}<span style="font-size:14px; color:#A0AAB5">/mo per HH</span></div>
-            <div class="dd-badge risk" style="background:${color}11; color:${color}; border-color:${color}44">${score > 0 ? 'FAVORABLE' : score < -50 ? 'CRITICAL EXPOSURE' : 'MODERATE RISK'}</div>
-            
-            <div class="dd-ai-t" style="margin-top:20px">LOCAL ANALYSIS</div>
+            <div class="dd-ai-t" style="margin-top:4px">LOCAL ANALYSIS</div>
             <div class="dd-card" style="border-left:3px solid ${color}">${esc(d.localNarrative || 'Data unavailable.')}</div>
             
             <div class="dd-ai-t">CRITICAL LOCAL SECTORS (Pertinent to Ngern Chaiyo)</div>
@@ -5679,22 +5779,22 @@ MACRO CONTEXT: ${ctx}
 
             ${monthlyDS > 0 ? `
             <div class="dd-ai-t" style="margin-top:16px">📊 HOUSEHOLD DEBT STRESS TEST</div>
-            <div style="background:var(--ink); border-radius:6px; padding:10px; border:1px solid ${nplRisk}33; margin-bottom:12px">
+            <div style="background:var(--paper); border-radius:6px; padding:10px; border:1px solid ${nplRisk}44; margin-bottom:12px">
               <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px">
-                <div style="text-align:center; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px">
+                <div style="text-align:center; padding:6px; background:var(--bg); border-radius:4px; border:1px solid var(--border)">
                   <div style="font-size:8px; color:var(--muted); margin-bottom:2px">MONTHLY DEBT SVC</div>
-                  <div style="font-size:13px; font-weight:800; color:white">฿${monthlyDS.toLocaleString()}</div>
-                  <div style="font-size:7px; color:rgba(255,255,255,0.3)">5-yr amortization</div>
+                  <div style="font-size:13px; font-weight:800; color:var(--ink)">฿${monthlyDS.toLocaleString()}</div>
+                  <div style="font-size:7px; color:var(--muted)">5-yr amortization</div>
                 </div>
-                <div style="text-align:center; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px">
+                <div style="text-align:center; padding:6px; background:var(--bg); border-radius:4px; border:1px solid var(--border)">
                   <div style="font-size:8px; color:var(--muted); margin-bottom:2px">DSCR BASELINE</div>
                   <div style="font-size:13px; font-weight:800; color:${nplRisk}">${dscPct}%</div>
-                  <div style="font-size:7px; color:rgba(255,255,255,0.3)">of monthly income</div>
+                  <div style="font-size:7px; color:var(--muted)">of monthly income</div>
                 </div>
-                <div style="text-align:center; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px">
+                <div style="text-align:center; padding:6px; background:var(--bg); border-radius:4px; border:1px solid var(--border)">
                   <div style="font-size:8px; color:var(--muted); margin-bottom:2px">POST-SHOCK DSCR</div>
                   <div style="font-size:13px; font-weight:800; color:${parseFloat(stressedDsc)>45?'#E25555':parseFloat(stressedDsc)>30?'#F5A623':'#4CAF82'}">${stressedDsc}%</div>
-                  <div style="font-size:7px; color:rgba(255,255,255,0.3)">${(incomeShock*100).toFixed(0)}% income contraction</div>
+                  <div style="font-size:7px; color:var(--muted)">${(incomeShock*100).toFixed(0)}% income contraction</div>
                 </div>
               </div>
               <div style="font-size:10px; padding:6px 8px; border-radius:4px; background:${nplRisk}11; border:1px solid ${nplRisk}33; color:${nplRisk}; font-weight:700">
@@ -5722,10 +5822,16 @@ MACRO CONTEXT: ${ctx}
           const res = await fetch('/api/oil-price');
           if (!res.ok) throw new Error('Live fetch err');
           const data = await res.json();
-          const p = data?.data?.price || data?.price || 75;
+          const livePrice = data?.data?.price || data?.price;
+          const isLive = livePrice && !data?.fallback;
+          const p = livePrice || 75;
           window.OIL_SLIDER_BASE = Math.round(p);
           const el = document.getElementById('liveOilValue');
-          if (el) { el.innerText = 'LIVE: $' + Math.round(p) + '/bbl'; el.style.color = 'var(--gold)'; }
+          if (el) {
+            el.innerText = (isLive ? 'LIVE: $' : 'EST: $') + Math.round(p) + '/bbl';
+            el.style.color = isLive ? 'var(--gold)' : 'var(--muted)';
+            if (isLive) el.title = 'Source: ' + (data?.source || 'live feed');
+          }
           const s = document.getElementById('oilSlider');
           if (s) { s.value = Math.round(p); window.OIL_SLIDER_DELTA = 0; updateSliders(); }
         } catch(e) { console.warn(e); }
