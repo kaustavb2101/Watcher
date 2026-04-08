@@ -62,12 +62,18 @@ export default async function handler(req) {
   const { query = '', province = '' } = body;
   const fullText = `${query} ${province}`;
 
-  const debtRecords  = KnowledgeBase.debt?.records  || {};
-  const lfsMap       = KnowledgeBase.nso?.map        || {};
-  const gppRecords   = KnowledgeBase.gpp?.records    || {};
-  const climateRecs  = KnowledgeBase.climate?.risk   || {};
-  const cropProvinces = KnowledgeBase.oae?.cropProvinces || {};
-  const provinceList = Object.keys(debtRecords);
+  const debtRecords   = KnowledgeBase.debt?.records       || {};
+  const lfsMapThai    = KnowledgeBase.nso?.map             || {}; // Thai-script keys
+  const gppRecords    = KnowledgeBase.gpp?.records         || {};
+  const climateRecs   = KnowledgeBase.climate?.risk        || {};
+  const cropProvinces = KnowledgeBase.oae?.cropProvinces   || {};
+  const provinceList  = Object.keys(debtRecords);
+
+  // NSO LFS JSON uses Thai script keys — build English→Thai reverse map
+  const thaiToEng = KnowledgeBase.provinces?.map || {};
+  const engToThai = Object.fromEntries(Object.entries(thaiToEng).map(([th, en]) => [en, th]));
+  // Wrapper: look up LFS by English province name
+  const lfsMap = { get: (eng) => lfsMapThai[engToThai[eng]] || null };
 
   const detectedCrops    = detectCrops(fullText);
   const explicitProvince = province ? [province] : [];
@@ -111,7 +117,7 @@ export default async function handler(req) {
 
   // ── 3. LABOR FORCE (NSO LFS Q3/2025) ──────────────────────────────────────
   const lfsChunks = detectedProvinces.slice(0, 6).map(prov => {
-    const d = lfsMap[prov];
+    const d = lfsMap.get(prov);
     if (!d) return null;
     return `${prov}: ${d.employed?.toFixed(0) ?? '—'}K employed, ${d.unemploymentRate?.toFixed(1) ?? '—'}% unemp`;
   }).filter(Boolean);
